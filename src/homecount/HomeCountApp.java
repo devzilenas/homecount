@@ -30,9 +30,22 @@ import com.sun.rowset.CachedRowSetImpl;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import javax.swing.JTextField;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.ListSelectionModel;
+
+import javax.swing.JFormattedTextField;
+import java.text.DateFormat;
+import javax.swing.text.DateFormatter;
+import java.text.SimpleDateFormat;
+
 import javax.swing.JLabel;
 import javax.sql.rowset.spi.SyncProviderException;
 import javax.sql.rowset.spi.SyncResolver;
+
+import java.math.BigDecimal;
+import java.text.NumberFormat;
+import java.text.DecimalFormat;
 
 public class HomeCountApp
 	implements RowSetListener
@@ -47,7 +60,8 @@ public class HomeCountApp
 	JTable table = null;
 
 	//IERecordUI fields
-	JTextField amountTf, nameTf, ondateTf;
+	JTextField nameTf;
+	JFormattedTextField amountFtf, ondateFtf;
 
 	public void setFrame(JFrame frame)
 	{
@@ -178,15 +192,40 @@ public class HomeCountApp
 		buttonBox.add(button2);
 		panel.add(buttonBox, BorderLayout.EAST);
 
-		setTable(new JTable());
+		JTable tt = new JTable();
+		tt.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		tt.getSelectionModel().addListSelectionListener(
+				new ListSelectionListener()
+				{
+					public void valueChanged(ListSelectionEvent e)
+					{
+						ListSelectionModel lsm = (ListSelectionModel) e.getSource();
+						if (!lsm.getValueIsAdjusting())
+						{
+							int selectedIndex = lsm.getMinSelectionIndex();
+							int selected      = getTable().convertRowIndexToModel(selectedIndex);
+							setTextFields(readRow(selected));
+						}
+					}
+				});
+		setTable(tt);
 		createIETable();
 
 		panel.add(new JScrollPane(getTable()), BorderLayout.NORTH);
 
 		//Record pane
-		amountTf = new JTextField();
+		NumberFormat nf = NumberFormat.getNumberInstance();
+		nf.setMinimumFractionDigits(2);
+		nf.setMaximumFractionDigits(2);
+		amountFtf = new JFormattedTextField((DecimalFormat)nf);
+
 		nameTf   = new JTextField();
-		ondateTf = new JTextField();
+		//For reference see p. 568 in "Java Swing the definitive guide".
+		DateFormat    displayFormat    = new SimpleDateFormat("yyyy-MM-dd");
+		DateFormatter displayFormatter = new DateFormatter(displayFormat);
+		ondateFtf = new JFormattedTextField(displayFormatter);
+		//clear all fields: get them filled with default values.
+		clearTextFields();
 
 		JPanel rp = new JPanel(new GridBagLayout());
 
@@ -208,7 +247,7 @@ public class HomeCountApp
 		c.gridx     = 1;
 		c.gridy     = 0;
 		c.gridwidth = 1;
-		rp.add(amountTf, c);
+		rp.add(amountFtf, c);
 
 		c           = new GridBagConstraints();
 		c.fill      = GridBagConstraints.HORIZONTAL;
@@ -248,7 +287,7 @@ public class HomeCountApp
 		c.gridx     = 1;
 		c.gridy     = 2;
 		c.gridwidth = 1;
-		rp.add(ondateTf, c);
+		rp.add(ondateFtf, c);
 
 		Box rpBBx = new Box(BoxLayout.X_AXIS);
 		JButton insertRow = new JButton("Insert row");
@@ -270,7 +309,12 @@ public class HomeCountApp
 						System.out.println("Inserting row");
 						IERecord ier = readTextFields();
 
-						getIETableModel().insertRow(ier.getAmount(), ier.getName(), ier.getOndate());
+						getIETableModel().insertRow(
+							ier.getAmount(), 
+							ier.getName()  ,
+							ier.getOndate());
+						syncWithTable();
+
 					}
 				});
 		updateRow.addActionListener(
@@ -315,9 +359,14 @@ public class HomeCountApp
 					public void actionPerformed(ActionEvent evt)
 					{
 						System.out.println("Deleting row");
+						int selectedRow = getTable().getSelectedRow();
+						if (-1 != selectedRow)
+						{
+							getIETableModel().removeRow(selectedRow);
+							syncWithTable();
+						}
 					}
 				});
-
 
 		c           = new GridBagConstraints();
 		c.fill      = GridBagConstraints.HORIZONTAL;
@@ -426,6 +475,19 @@ public class HomeCountApp
 			close();
 		}
 
+		public void removeRow(int row)
+		{
+			try
+			{
+				getRowSet().absolute(row+1);
+				getRowSet().deleteRow();
+			}
+			catch (SQLException e)
+			{
+				System.out.println("Error deleting row."+e);
+			}
+		}
+
 		public void close()
 		{
 			try
@@ -450,7 +512,23 @@ public class HomeCountApp
 
 		public Class getColumnClass(int column)
 		{
-			return String.class;
+			Class<?> cl = String.class;
+			switch (column)
+			{
+				case 0:
+					cl = Integer.class;
+					break;
+				case 1:
+					cl = BigDecimal.class;
+					break;
+				case 2:
+					cl = String.class;
+					break;
+				case 3:
+					cl = String.class;
+					break;
+			}
+			return cl;
 		}
 
 		public int getColumnCount()
@@ -477,14 +555,16 @@ public class HomeCountApp
 			return rows;
 		}
 
-		public void insertRow(String amount, String name, String ondate)
+		public void insertRow(BigDecimal amount, String name, java.util.Date ondate)
 		{
 			try
 			{
 				getRowSet().moveToInsertRow();
-				getRowSet().updateString("amount", amount);
+				getRowSet().updateNull("id");
+				getRowSet().updateBigDecimal("amount", amount);
 				getRowSet().updateString("name"  , name  );
-				getRowSet().updateString("ondate", ondate);
+				getRowSet().updateDate(  "ondate", 
+						new java.sql.Date(ondate.getTime()));
 				getRowSet().insertRow();
 				getRowSet().moveToCurrentRow();
 			}
@@ -528,9 +608,9 @@ public class HomeCountApp
 			try
 			{
 				getRowSet().absolute(rowIndex+1);
-				getRowSet().updateString("amount", r.getAmount());
-				getRowSet().updateString("name"  , r.getName()  );
-				getRowSet().updateString("ondate", r.getOndate());
+				getRowSet().updateBigDecimal("amount", r.getAmount());
+				getRowSet().updateString("name"      , r.getName()  );
+				getRowSet().updateDate("ondate"      , new java.sql.Date(r.getOndate().getTime()));
 				getRowSet().updateRow();
 			}
 			catch (SQLException e)
@@ -572,22 +652,22 @@ public class HomeCountApp
 
 	public static class IERecord
 	{
-		String amount;
-		String name  ;
-		String ondate;
+		BigDecimal     amount = BigDecimal.ZERO;
+		String         name   = "";
+		java.util.Date ondate = new java.util.Date();
 
 		public IERecord()
 		{
 		}
 
-		public IERecord(String amount, String name, String ondate)
+		public IERecord(BigDecimal amount, String name, java.util.Date ondate)
 		{
 			this.amount = amount;
 			this.name   = name  ;
 			this.ondate = ondate;
 		}
 
-		public String getAmount()
+		public BigDecimal getAmount()
 		{
 			return amount;
 		}
@@ -597,10 +677,29 @@ public class HomeCountApp
 			return name;
 		}
 
-		public String getOndate()
+		public java.util.Date getOndate()
 		{
 			return ondate;
 		}
+	}
+
+	public IERecord readRow(int rowIndex)
+	{
+		CachedRowSet crs = getIETableModel().getRowSet();
+		IERecord r = new IERecord();
+		try
+		{
+			crs.absolute(rowIndex+1);
+			r = new IERecord(
+					crs.getBigDecimal("amount"),
+					crs.getString("name"),
+					crs.getDate("ondate"));
+		}
+		catch (SQLException e)
+		{
+			System.out.println("Error reading row."+e);
+		}
+		return r;
 	}
 
 	//Fills text fields with default data
@@ -611,14 +710,18 @@ public class HomeCountApp
 
 	public IERecord readTextFields()
 	{
-		return new IERecord(amountTf.getText(), nameTf.getText(), ondateTf.getText());
+		return new IERecord(
+				new BigDecimal(((Number)amountFtf.getValue()).doubleValue()), 
+				nameTf.getText(),
+				(java.util.Date) ondateFtf.getValue());
 	}
 
 	public void setTextFields(IERecord ieRecord)
 	{
-		amountTf.setText(ieRecord.getAmount());
+		amountFtf.setValue(ieRecord.getAmount());
 		nameTf.setText(ieRecord.getName());
-		ondateTf.setText(ieRecord.getOndate());
+		//***
+		ondateFtf.setValue(ieRecord.getOndate());
 	}
 
 	public void syncWithTable()
