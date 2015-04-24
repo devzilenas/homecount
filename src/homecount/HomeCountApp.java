@@ -38,6 +38,10 @@ import javax.swing.JFormattedTextField;
 import java.text.DateFormat;
 import javax.swing.text.DateFormatter;
 import java.text.SimpleDateFormat;
+import java.text.DecimalFormat;
+
+import javax.swing.table.DefaultTableCellRenderer;
+import java.awt.Component;
 
 import javax.swing.JLabel;
 import javax.sql.rowset.spi.SyncProviderException;
@@ -46,6 +50,8 @@ import javax.sql.rowset.spi.SyncResolver;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.text.DecimalFormat;
+
+import org.h2.tools.Server;
 
 public class HomeCountApp
 	implements RowSetListener
@@ -62,6 +68,8 @@ public class HomeCountApp
 	//IERecordUI fields
 	JTextField nameTf;
 	JFormattedTextField amountFtf, ondateFtf;
+
+	Server dbServer = null;
 
 	public void setFrame(JFrame frame)
 	{
@@ -103,6 +111,16 @@ public class HomeCountApp
 		return frame;
 	}
 
+	public void setDBServer(Server dbServer)
+	{
+		this.dbServer = dbServer;
+	}
+
+	public Server getDBServer()
+	{
+		return dbServer;
+	}
+
 	public static void main(String[] args)
 	{
 		System.out.println("It's run!");
@@ -117,7 +135,7 @@ public class HomeCountApp
 		{
 			Class.forName("org.h2.Driver");
 			setConnection(
-					DriverManager.getConnection("jdbc:h2:~/homecount", "sa", "")); 
+					DriverManager.getConnection("jdbc:h2:~/homecount;AUTO_SERVER=TRUE", "sa", "")); 
 		}
 		catch (ClassNotFoundException | SQLException e)
 		{
@@ -204,8 +222,26 @@ public class HomeCountApp
 						{
 							int selectedIndex = lsm.getMinSelectionIndex();
 							int selected      = getTable().convertRowIndexToModel(selectedIndex);
-							setTextFields(readRow(selected));
+							//this check is required since after we update the row the valueChanged is called again and gives us -1 index. Don't know why.
+							if (-1 != selectedIndex)
+							{
+								System.out.format("Selected: %d, translated:%d, reading:%d%n",selectedIndex, selected, selected+1);
+								setTextFields(readRow(selected));
+							}
 						}
+					}
+				});
+		//Since it doesn't know how to render BigDecimal let's set default renderer
+		tt.setDefaultRenderer(
+				BigDecimal.class, 
+				new DefaultTableCellRenderer()
+				{
+					public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
+					{
+						DecimalFormat formatter = new DecimalFormat("0.00");
+						value = formatter.format((Number) value);
+
+						return super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
 					}
 				});
 		setTable(tt);
@@ -322,8 +358,8 @@ public class HomeCountApp
 				{
 					public void actionPerformed(ActionEvent evt)
 					{
-						System.out.println("Updating row"); 
 						int selectedRow = getTable().getSelectedRow();
+						System.out.format("Updating row %d%n.",selectedRow); 
 						if (-1 != selectedRow)
 						{
 							getIETableModel().updateRow(
@@ -579,11 +615,20 @@ public class HomeCountApp
 			Object ret = "";
 			try
 			{
+				Class<?> columnClass = getColumnClass(columnIndex);
+
 				getRowSet().absolute(rowIndex+1);
 				Object o = getRowSet().getObject(columnIndex+1);
 				if (null != o)
 				{
-					ret = o.toString();
+					if (BigDecimal.class.equals(columnClass))
+					{
+						ret = (BigDecimal) o;
+					}
+					else 
+					{
+						ret = o.toString();
+					}
 				}
 			} 
 			catch (SQLException e)
