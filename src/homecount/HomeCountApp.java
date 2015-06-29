@@ -15,11 +15,12 @@ import javax.swing.ScrollPaneConstants;
 import java.sql.*;
 import javax.sql.*;
 import javax.sql.rowset.CachedRowSet;
-import javax.sql.*;
+import javax.sql.rowset.JdbcRowSet  ;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.TableModel;
 import javax.swing.JTable;
 import com.sun.rowset.CachedRowSetImpl;
+import com.sun.rowset.JdbcRowSetImpl;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import javax.swing.JTextField;
@@ -161,6 +162,37 @@ public class HomeCountApp
 		getTable().setModel(getIETableModel());
 	}
 
+	Statement newStatement()
+	{
+		Statement stmt = null;
+		try
+		{
+			stmt = getConnection().createStatement(
+					ResultSet.TYPE_SCROLL_SENSITIVE, 
+					ResultSet.CONCUR_UPDATABLE); 
+		}
+		catch (SQLException e)
+		{
+			e.printStackTrace();
+		}
+		return stmt;
+	}
+
+	RowSet makeRowSet(Statement stmt, String query)
+	{
+		RowSet rowSet = null;
+		try
+		{
+			rowSet = new JdbcRowSetImpl(stmt.executeQuery(query));
+		}
+		catch (SQLException e)
+		{
+			e.printStackTrace();
+		}
+		return rowSet;
+	}
+
+
 	/**
 	 * Show frame.
 	 */
@@ -172,6 +204,14 @@ public class HomeCountApp
 				new Dimension(600, 800));
 		JPanel panel = new JPanel(new BorderLayout());
 		frame.setContentPane(panel);
+
+		Tablex tablex = new Tablex(
+				makeRowSet(
+					newStatement(), 
+					"SELECT * FROM income_expense"));
+
+		JTable tableView = new JTable(tablex.getTableModel()); 
+		panel.add(new JScrollPane(tableView), BorderLayout.WEST);
 
 		JButton button1 = new JButton("Connect to db.");
 		button1.addActionListener(
