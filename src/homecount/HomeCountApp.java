@@ -6,23 +6,16 @@ import javax.swing.JPanel;
 import javax.swing.JButton;
 import java.awt.Dimension;
 import java.awt.Color;
-import javax.swing.text.PlainDocument;
-import javax.swing.text.Document;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import javax.swing.JTextArea;
-import javax.swing.text.Document;
-import javax.swing.text.PlainDocument;
 import javax.swing.text.BadLocationException;
 import javax.swing.JScrollPane;
 import javax.swing.ScrollPaneConstants;
-import java.sql.DriverManager;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.ResultSetMetaData;
-import javax.sql.RowSetListener;
+import java.sql.*;
+import javax.sql.*;
 import javax.sql.rowset.CachedRowSet;
-import javax.sql.RowSetEvent;
+import javax.sql.*;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.TableModel;
 import javax.swing.JTable;
@@ -126,7 +119,23 @@ public class HomeCountApp
 		System.out.println("It's run!");
 		HomeCountApp hca = new HomeCountApp(); 
 		hca.connectDB();
+		//Create DB with a table if not found
+		hca.setupDB(); 
 		hca.prepareFrame();
+	}
+
+	public void setupDB()
+	{
+		try 
+		{
+			PreparedStatement create = getConnection().prepareStatement(
+					"CREATE TABLE IF NOT EXISTS income_expense ( id     INTEGER       NOT NULL AUTO_INCREMENT PRIMARY KEY, amount DECIMAL(10,2) NOT NULL, name   VARCHAR(255)  NOT NULL, ondate DATE          NOT NULL)");
+			create.execute();
+		}
+		catch (SQLException e)
+		{ 
+			System.out.println("Error creating table " + e);
+		}
 	}
 
 	public void connectDB()
@@ -135,7 +144,7 @@ public class HomeCountApp
 		{
 			Class.forName("org.h2.Driver");
 			setConnection(
-					DriverManager.getConnection("jdbc:h2:~/homecount;AUTO_SERVER=TRUE", "sa", "")); 
+					DriverManager.getConnection("jdbc:h2:tcp://localhost/~/homecount;AUTO_SERVER=TRUE", "sa", "")); 
 		}
 		catch (ClassNotFoundException | SQLException e)
 		{
@@ -164,29 +173,12 @@ public class HomeCountApp
 		JPanel panel = new JPanel(new BorderLayout());
 		frame.setContentPane(panel);
 
-		final Document logDocument = new PlainDocument();
-		JTextArea      txtArea     = new JTextArea(logDocument);
-		txtArea.setLineWrap(true);
-		JScrollPane    scrollPane  = new JScrollPane(
-				txtArea,
-				ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS,
-				ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-		panel.add(scrollPane, BorderLayout.CENTER);
-
 		JButton button1 = new JButton("Connect to db.");
 		button1.addActionListener(
 				new ActionListener()
 				{
 					public void actionPerformed(ActionEvent e)
 					{
-						try 
-						{
-							logDocument.insertString(0, "Key 1 pressed", null);
-						}
-						catch (BadLocationException bex)
-						{
-							System.exit(1);
-						}
 					}
 				});
 		JButton button2 = new JButton("Exit");
@@ -195,14 +187,6 @@ public class HomeCountApp
 				{
 					public void actionPerformed(ActionEvent e)
 					{
-						try
-						{
-							logDocument.insertString(0, "Key 2 pressed", null);
-						}
-						catch (BadLocationException bex)
-						{
-							System.exit(1);
-						}
 					}
 				});
 		Box buttonBox = new Box(BoxLayout.PAGE_AXIS);
@@ -596,10 +580,10 @@ public class HomeCountApp
 			try
 			{
 				getRowSet().moveToInsertRow();
-				getRowSet().updateNull("id");
+				getRowSet().updateNull(      "id"             );
 				getRowSet().updateBigDecimal("amount", amount);
-				getRowSet().updateString("name"  , name  );
-				getRowSet().updateDate(  "ondate", 
+				getRowSet().updateString(    "name"  , name  );
+				getRowSet().updateDate(      "ondate", 
 						new java.sql.Date(ondate.getTime()));
 				getRowSet().insertRow();
 				getRowSet().moveToCurrentRow();
@@ -654,8 +638,8 @@ public class HomeCountApp
 			{
 				getRowSet().absolute(rowIndex+1);
 				getRowSet().updateBigDecimal("amount", r.getAmount());
-				getRowSet().updateString("name"      , r.getName()  );
-				getRowSet().updateDate("ondate"      , new java.sql.Date(r.getOndate().getTime()));
+				getRowSet().updateString(    "name"  , r.getName()  );
+				getRowSet().updateDate(      "ondate", new java.sql.Date(r.getOndate().getTime()));
 				getRowSet().updateRow();
 			}
 			catch (SQLException e)
@@ -736,9 +720,9 @@ public class HomeCountApp
 		{
 			crs.absolute(rowIndex+1);
 			r = new IERecord(
-					crs.getBigDecimal("amount"),
-					crs.getString("name"),
-					crs.getDate("ondate"));
+					crs.getBigDecimal("amount" ),
+					crs.getString(    "name"   ),
+					crs.getDate(      "ondate" ));
 		}
 		catch (SQLException e)
 		{
