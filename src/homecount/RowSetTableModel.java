@@ -5,7 +5,11 @@ import javax.sql.RowSet;
 import java.sql.SQLException;
 
 /**
- * RowSetTableModel provides a 
+ * RowSetTableModel provides an TableModel from RowSet.
+ *
+ * @author Marius Žilėnas
+ * @version 1.0
+ * @since 2015-06-29
  */
 public class RowSetTableModel
 { 
@@ -26,8 +30,28 @@ public class RowSetTableModel
 		return tableModel;
 	}
 
+	/**
+	 * @override
+	 */
+	public Class getColumnClass(int column)
+	{
+		return String.class;
+	}
+
+	/**
+	 * @override
+	 */
+	public void updateRow(Object o)
+	{
+	}
+
 	TableModel tableModel = new AbstractTableModel()
 	{
+		public Class getColumnClass(int column)
+		{
+			return RowSetTableModel.this.getColumnClass(column);
+		}
+
 		public int getRowCount()
 		{
 			RowSet rowSet = getRowSet();
@@ -64,9 +88,24 @@ public class RowSetTableModel
 			return count;
 		}
 
+		public String getColumnName(int column)
+		{
+			int col = column + 1; //in JDBC columns start with 1
+			String name = "";
+			try 
+			{
+				name = getRowSet().getMetaData().getColumnName(col);
+			}
+			catch (SQLException e)
+			{
+				name = super.getColumnName(column);
+				e.printStackTrace();
+			}
+			return name;
+		}
+
 		public Object getValueAt(int row, int column)
-		{ 
-			System.out.format("getting value %d, %d %n", row, column);
+		{
 			RowSet rowSet = getRowSet();
 			Object value  = null;
 			try 

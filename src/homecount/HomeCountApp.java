@@ -18,6 +18,7 @@ import javax.sql.rowset.CachedRowSet;
 import javax.sql.rowset.JdbcRowSet  ;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.TableModel;
+import javax.swing.table.AbstractTableModel;
 import javax.swing.JTable;
 import com.sun.rowset.CachedRowSetImpl;
 import com.sun.rowset.JdbcRowSetImpl;
@@ -47,6 +48,9 @@ import java.text.DecimalFormat;
 
 import org.h2.tools.Server;
 
+import java.util.Observer;
+import java.util.Observable;
+
 public class HomeCountApp
 	implements RowSetListener
 {
@@ -58,6 +62,7 @@ public class HomeCountApp
 	IncomeExpenseTableModel IETableModel = null;
 	//Income/expense table
 	JTable table = null;
+	TableSelector ts = null;
 
 	//IERecordUI fields
 	JTextField nameTf;
@@ -205,7 +210,6 @@ public class HomeCountApp
 		return rowSet;
 	}
 
-
 	/**
 	 * Show frame.
 	 */
@@ -218,13 +222,97 @@ public class HomeCountApp
 		JPanel panel = new JPanel(new BorderLayout());
 		frame.setContentPane(panel);
 
-		RowSetTableModel tm = new RowSetTableModel(
+		RowSetTableModel tm =
+			new RowSetTableModel(
 				makeRowSet(
 					newStatement(), 
-					"SELECT * FROM income_expense"));
+					"SELECT * FROM income_expense"))
+			{
+				public void updateRow(Object o)
+				{ 
+					RowSet rs = getRowSet();
+					IERecord r = (IERecord) o;
+					try
+					{
+						rs.updateBigDecimal("amount", r.getAmount());
+						rs.updateString(    "name"  , r.getName()  );
+						rs.updateDate(      "ondate", new java.sql.Date(
+									r.getOndate().getTime()));
+						rs.updateRow();
+					}
+					catch (SQLException e)
+					{
+						e.printStackTrace();
+					}
+				}
+
+				public Class getColumnClass(int column)
+				{
+					Class<?> cl = String.class;
+					switch (column)
+					{
+						case 0:
+							cl = Integer.class;
+							break;
+						case 1:
+							cl = BigDecimal.class;
+							break;
+						case 2:
+							cl = String.class;
+							break;
+						case 3:
+							cl = String.class;
+							break;
+					}
+					return cl;
+				}
+			};
 
 		JTable tableView = new JTable(tm.getTableModel()); 
+		tableView.setDefaultRenderer(
+				BigDecimal.class, 
+				new DefaultTableCellRenderer()
+				{
+					public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
+					{
+						DecimalFormat formatter = new DecimalFormat("0.00");
+						value = formatter.format((Number) value);
+
+						return super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+					}
+				});
 		panel.add(new JScrollPane(tableView), BorderLayout.WEST);
+		ts = new TableSelector(tableView, tm)
+		{
+			public Object readRow(int selected)
+			{
+				try
+				{
+					RowSet rs = getRowSetTableModel().getRowSet();
+					rs.absolute(selected + 1);
+					return new IERecord(
+						rs.getBigDecimal("amount" ),
+						rs.getString    ("name"   ),
+						rs.getDate      ("ondate" ));
+				} 
+				catch (SQLException e)
+				{
+					e.printStackTrace();
+				}
+				return null;
+			}
+		};
+		ts.addObserver(
+			new Observer()
+			{
+				public void update(Observable o, Object arg)
+				{
+					System.out.println("Observable updated");
+					TableSelector ts = (TableSelector) o;
+					System.out.println("IERecord: " + (IERecord)ts.getCurrent());
+					setTextFields((IERecord) ts.getCurrent());
+				}
+			});
 
 		JButton button1 = new JButton("Connect to db.");
 		button1.addActionListener(
@@ -395,13 +483,13 @@ public class HomeCountApp
 				{
 					public void actionPerformed(ActionEvent evt)
 					{
-						int selectedRow = getTable().getSelectedRow();
-						System.out.format("Updating row %d%n.",selectedRow); 
-						if (-1 != selectedRow)
+						//if has current selected row
+						if (null != ts.getCurrent())
 						{
-							getIETableModel().updateRow(
-								selectedRow, readTextFields());
-							syncWithTable();
+							ts.getRowSetTableModel().updateRow(
+								readTextFields()); 
+							ts.fireTableDataChanged();
+							clearTextFields();
 						}
 					}
 				});
@@ -734,12 +822,21 @@ public class HomeCountApp
 
 	public static class IERecord
 	{
+		Integer        id;
 		BigDecimal     amount = BigDecimal.ZERO;
 		String         name   = "";
 		java.util.Date ondate = new java.util.Date();
 
 		public IERecord()
 		{
+		}
+
+		public IERecord(Integer id, BigDecimal amount, String name, java.util.Date ondate)
+		{
+			this.id = id;
+			this.amount = amount;
+			this.name   = name  ;
+			this.ondate = ondate;
 		}
 
 		public IERecord(BigDecimal amount, String name, java.util.Date ondate)
@@ -763,10 +860,22 @@ public class HomeCountApp
 		{
 			return ondate;
 		}
+		
+		public String toString()
+		{
+			DecimalFormat formatter = new DecimalFormat("0.00");
+			return String.format(
+					"%tF;%s;%s", 
+					getOndate(),
+					formatter.format((Number) getAmount()), 
+					getName()
+					);
+		}
 	}
 
 	public IERecord readRow(int rowIndex)
 	{
+		System.out.println("Cached read row");
 		CachedRowSet crs = getIETableModel().getRowSet();
 		IERecord r = new IERecord();
 		try
