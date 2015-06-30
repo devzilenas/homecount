@@ -119,6 +119,7 @@ public class HomeCountApp
 	{
 		System.out.println("It's run!");
 		HomeCountApp hca = new HomeCountApp(); 
+		hca.startTCPServer();
 		hca.connectDB();
 		//Create DB with a table if not found
 		hca.setupDB(); 
@@ -136,6 +137,18 @@ public class HomeCountApp
 		catch (SQLException e)
 		{ 
 			System.out.println("Error creating table " + e);
+		}
+	}
+
+	public void startTCPServer()
+	{
+		try
+		{
+			setDBServer(Server.createTcpServer().start());
+		}
+		catch (SQLException e)
+		{
+			e.printStackTrace();
 		}
 	}
 
@@ -205,12 +218,12 @@ public class HomeCountApp
 		JPanel panel = new JPanel(new BorderLayout());
 		frame.setContentPane(panel);
 
-		Tablex tablex = new Tablex(
+		RowSetTableModel tm = new RowSetTableModel(
 				makeRowSet(
 					newStatement(), 
 					"SELECT * FROM income_expense"));
 
-		JTable tableView = new JTable(tablex.getTableModel()); 
+		JTable tableView = new JTable(tm.getTableModel()); 
 		panel.add(new JScrollPane(tableView), BorderLayout.WEST);
 
 		JButton button1 = new JButton("Connect to db.");
