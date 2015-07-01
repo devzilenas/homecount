@@ -28,10 +28,9 @@ public class TableSelector
 		addListener();
 	}
 
-	public void fireTableDataChanged()
+	public void fireTableRowsUpdated(int firstRow, int lastRow)
 	{
-		((AbstractTableModel)getRowSetTableModel().getTableModel()).fireTableDataChanged();
-		setCurrent(null);//clear current
+		((AbstractTableModel) getRowSetTableModel().getTableModel()).fireTableRowsUpdated(firstRow, lastRow);
 	}
 
 	public JTable getTable()

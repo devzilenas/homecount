@@ -314,7 +314,7 @@ public class HomeCountApp
 				}
 			});
 
-		JButton button1 = new JButton("Connect to db.");
+		JButton button1 = new JButton("Action 1.");
 		button1.addActionListener(
 				new ActionListener()
 				{
@@ -322,7 +322,7 @@ public class HomeCountApp
 					{
 					}
 				});
-		JButton button2 = new JButton("Exit");
+		JButton button2 = new JButton("Action 2");
 		button2.addActionListener(
 				new ActionListener()
 				{
@@ -486,10 +486,18 @@ public class HomeCountApp
 						//if has current selected row
 						if (null != ts.getCurrent())
 						{
+							AbstractTableModel atm = (AbstractTableModel) ts.getRowSetTableModel().getTableModel();
 							ts.getRowSetTableModel().updateRow(
-								readTextFields()); 
-							ts.fireTableDataChanged();
-							clearTextFields();
+								readTextFields());
+							RowSet rs = ts.getRowSetTableModel().getRowSet();
+							try
+							{
+								ts.fireTableRowsUpdated(rs.getRow()-1, rs.getRow()-1);
+							}
+							catch (SQLException e)
+							{
+								e.printStackTrace();
+							}
 						}
 					}
 				});
