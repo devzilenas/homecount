@@ -14,13 +14,11 @@ import javax.swing.JScrollPane;
 import javax.swing.ScrollPaneConstants;
 import java.sql.*;
 import javax.sql.*;
-import javax.sql.rowset.CachedRowSet;
 import javax.sql.rowset.JdbcRowSet  ;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.TableModel;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.JTable;
-import com.sun.rowset.CachedRowSetImpl;
 import com.sun.rowset.JdbcRowSetImpl;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -52,20 +50,17 @@ import java.util.Observer;
 import java.util.Observable;
 
 public class HomeCountApp
-	implements RowSetListener
 {
 	/**
 	 * Main window.
 	 */
 	JFrame frame = null;
 	Connection connection = null;
-	IncomeExpenseTableModel IETableModel = null;
-	//Income/expense table
-	JTable table = null;
+
 	TableSelector ts = null;
 
 	//IERecordUI fields
-	JTextField nameTf;
+	JTextField          nameTf;
 	JFormattedTextField amountFtf, ondateFtf;
 
 	Server dbServer = null;
@@ -85,37 +80,17 @@ public class HomeCountApp
 		return connection;
 	}
 
-	public JTable getTable()
-	{
-		return table;
-	}
-
-	public void setTable(JTable table)
-	{
-		this.table = table;
-	}
-
-	public void setIETableModel(IncomeExpenseTableModel IETableModel)
-	{
-		this.IETableModel = IETableModel;
-	}
-
-	public IncomeExpenseTableModel getIETableModel()
-	{
-		return IETableModel;
-	}
-
 	public JFrame getFrame()
 	{
 		return frame;
 	}
 
-	public void setDBServer(Server dbServer)
+	void setDBServer(Server dbServer)
 	{
 		this.dbServer = dbServer;
 	}
 
-	public Server getDBServer()
+	Server getDBServer()
 	{
 		return dbServer;
 	}
@@ -131,7 +106,7 @@ public class HomeCountApp
 		hca.prepareFrame();
 	}
 
-	public void setupDB()
+	void setupDB()
 	{
 		try 
 		{
@@ -145,7 +120,7 @@ public class HomeCountApp
 		}
 	}
 
-	public void startTCPServer()
+	void startTCPServer()
 	{
 		try
 		{
@@ -157,7 +132,7 @@ public class HomeCountApp
 		}
 	}
 
-	public void connectDB()
+	void connectDB()
 	{
 		try
 		{
@@ -169,15 +144,6 @@ public class HomeCountApp
 		{
 			System.out.println("DB connection error occured." + e);
 		}
-	}
-
-	public void createIETable()
-	{
-		setIETableModel(
-			new IncomeExpenseTableModel(
-				getIncomeExpenseTableContents())); 
-		getIETableModel().addEventsHandlersToRowSet(this);
-		getTable().setModel(getIETableModel());
 	}
 
 	Statement newStatement()
@@ -273,7 +239,9 @@ public class HomeCountApp
 				BigDecimal.class, 
 				new DefaultTableCellRenderer()
 				{
-					public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
+					public Component getTableCellRendererComponent(
+						JTable table, Object value, boolean isSelected, 
+						boolean hasFocus, int row, int column)
 					{
 						DecimalFormat formatter = new DecimalFormat("0.00");
 						value = formatter.format((Number) value);
@@ -282,6 +250,7 @@ public class HomeCountApp
 					}
 				});
 		panel.add(new JScrollPane(tableView), BorderLayout.WEST);
+
 		ts = new TableSelector(tableView, tm)
 		{
 			public Object readRow(int selected)
@@ -334,45 +303,6 @@ public class HomeCountApp
 		buttonBox.add(button1);
 		buttonBox.add(button2);
 		panel.add(buttonBox, BorderLayout.EAST);
-
-		JTable tt = new JTable();
-		tt.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-		tt.getSelectionModel().addListSelectionListener(
-				new ListSelectionListener()
-				{
-					public void valueChanged(ListSelectionEvent e)
-					{
-						ListSelectionModel lsm = (ListSelectionModel) e.getSource();
-						if (!lsm.getValueIsAdjusting())
-						{
-							int selectedIndex = lsm.getMinSelectionIndex();
-							int selected      = getTable().convertRowIndexToModel(selectedIndex);
-							//this check is required since after we update the row the valueChanged is called again and gives us -1 index. Don't know why.
-							if (-1 != selectedIndex)
-							{
-								System.out.format("Selected: %d, translated:%d, reading:%d%n",selectedIndex, selected, selected+1);
-								setTextFields(readRow(selected));
-							}
-						}
-					}
-				});
-		//Since it doesn't know how to render BigDecimal let's set default renderer
-		tt.setDefaultRenderer(
-				BigDecimal.class, 
-				new DefaultTableCellRenderer()
-				{
-					public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
-					{
-						DecimalFormat formatter = new DecimalFormat("0.00");
-						value = formatter.format((Number) value);
-
-						return super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-					}
-				});
-		setTable(tt);
-		createIETable();
-
-		panel.add(new JScrollPane(getTable()), BorderLayout.NORTH);
 
 		//Record pane
 		NumberFormat nf = NumberFormat.getNumberInstance();
@@ -453,13 +383,9 @@ public class HomeCountApp
 		Box rpBBx = new Box(BoxLayout.X_AXIS);
 		JButton insertRow = new JButton("Insert row");
 		JButton updateRow = new JButton("Update row");
-		JButton updateDb  = new JButton("Update database");
-		JButton discard   = new JButton("Discard");
 		JButton deleteRow = new JButton("Delete row");
 		rpBBx.add(insertRow);
 		rpBBx.add(updateRow);
-		rpBBx.add(updateDb);
-		rpBBx.add(discard);
 		rpBBx.add(deleteRow);
 
 		insertRow.addActionListener(
@@ -470,14 +396,15 @@ public class HomeCountApp
 						System.out.println("Inserting row");
 						IERecord ier = readTextFields();
 
+						/*
 						getIETableModel().insertRow(
 							ier.getAmount(), 
 							ier.getName()  ,
 							ier.getOndate());
-						syncWithTable();
-
+						*/ 
 					}
 				});
+
 		updateRow.addActionListener(
 				new ActionListener()
 				{
@@ -501,26 +428,6 @@ public class HomeCountApp
 						}
 					}
 				});
-		updateDb.addActionListener(
-				new ActionListener()
-				{
-					public void actionPerformed(ActionEvent evt)
-				    {
-						//updates database with data from JTable
-						syncWithTable();
-						System.out.println("Updating database"); 
-					}
-				});
-		discard.addActionListener(
-				new ActionListener()
-				{
-					public void actionPerformed(ActionEvent evt)
-				    {
-						System.out.println("Clearing fields");
-						clearTextFields();
-						createIETable();
-					}
-				});
 
 		deleteRow.addActionListener(
 				new ActionListener()
@@ -528,11 +435,8 @@ public class HomeCountApp
 					public void actionPerformed(ActionEvent evt)
 					{
 						System.out.println("Deleting row");
-						int selectedRow = getTable().getSelectedRow();
-						if (-1 != selectedRow)
+						if (-1 != -1)
 						{
-							getIETableModel().removeRow(selectedRow);
-							syncWithTable();
 						}
 					}
 				});
@@ -548,284 +452,6 @@ public class HomeCountApp
 		frame.setVisible(true);
 		frame.pack();
 		setFrame(frame);
-	}
-
-	public CachedRowSet getIncomeExpenseTableContents()
-	{
-		CachedRowSet crs = null;
-		try
-		{ 
-			crs = new CachedRowSetImpl();
-			crs.setType(CachedRowSet.TYPE_SCROLL_INSENSITIVE);
-			crs.setConcurrency(CachedRowSet.CONCUR_UPDATABLE);
-			crs.setCommand(
-					  "SELECT id, amount, name, ondate FROM income_expense"); 
-
-			crs.setKeyColumns(new int[]{1});
-			crs.execute(getConnection());
-		}
-		catch (SQLException e)
-		{
-			System.out.println("Error getting income/expense table data."+e);
-		}
-
-		return crs;
-	}
-
-	/**
-	 * Setup JDBC.
-	 */
-	public class IncomeExpenseTableModel
-		implements TableModel
-	{
-		CachedRowSet      rowSet;
-		ResultSetMetaData metadata;
-		int cols, rows;
-
-		public CachedRowSet getRowSet()
-		{
-			return rowSet;
-		}
-
-		public void setCols(int cols)
-		{
-			this.cols = cols;
-		}
-
-		public void setRows(int rows)
-		{
-			this.rows = rows;
-		} 
-
-		public int getRows()
-		{
-			return rows;
-		}
-
-		public void setRowSet(CachedRowSet rowSet)
-		{
-			this.rowSet = rowSet;
-		}
-
-		public ResultSetMetaData getMetaData()
-		{
-			return metadata;
-		}
-
-		public void setMetadata(ResultSetMetaData metadata)
-		{
-			this.metadata = metadata;
-		}
-
-		public IncomeExpenseTableModel(CachedRowSet rowSet)
-		{
-			try
-			{
-				setRowSet(rowSet);
-				setMetadata(getRowSet().getMetaData());
-				setCols(getMetaData().getColumnCount());
-
-				//Calculate rows
-				getRowSet().beforeFirst();
-				while (getRowSet().next())
-				{ 
-					setRows(getRows()+1);
-				}
-				getRowSet().beforeFirst(); 
-			}
-			catch (SQLException e)
-			{
-				System.out.println("Error creating income/expense table model."+e);
-			}
-		}
-
-		protected void finalize()
-		{
-			close();
-		}
-
-		public void removeRow(int row)
-		{
-			try
-			{
-				getRowSet().absolute(row+1);
-				getRowSet().deleteRow();
-			}
-			catch (SQLException e)
-			{
-				System.out.println("Error deleting row."+e);
-			}
-		}
-
-		public void close()
-		{
-			try
-			{
-				getRowSet().getStatement().close();
-			}
-			catch (SQLException e)
-			{
-				System.out.println("Could not close statement."+e);
-			}
-		}
-
-		public void addEventsHandlersToRowSet(RowSetListener listener)
-		{
-			getRowSet().addRowSetListener(listener);
-		}
-
-		public void addTableModelListener(TableModelListener l)
-		{
-			//Empty intentionaly
-		}
-
-		public Class getColumnClass(int column)
-		{
-			Class<?> cl = String.class;
-			switch (column)
-			{
-				case 0:
-					cl = Integer.class;
-					break;
-				case 1:
-					cl = BigDecimal.class;
-					break;
-				case 2:
-					cl = String.class;
-					break;
-				case 3:
-					cl = String.class;
-					break;
-			}
-			return cl;
-		}
-
-		public int getColumnCount()
-		{
-			return cols;
-		}
-
-		public String getColumnName(int columnIndex)
-		{
-			String ret = String.format("Column%d", columnIndex + 1);
-			try
-			{
-				ret = getMetaData().getColumnLabel(columnIndex+1);
-			}
-			catch (SQLException e)
-			{
-				ret = "error";
-			}
-			return ret;
-		}
-
-		public int getRowCount()
-		{
-			return rows;
-		}
-
-		public void insertRow(BigDecimal amount, String name, java.util.Date ondate)
-		{
-			try
-			{
-				getRowSet().moveToInsertRow();
-				getRowSet().updateNull(      "id"             );
-				getRowSet().updateBigDecimal("amount", amount);
-				getRowSet().updateString(    "name"  , name  );
-				getRowSet().updateDate(      "ondate", 
-						new java.sql.Date(ondate.getTime()));
-				getRowSet().insertRow();
-				getRowSet().moveToCurrentRow();
-			}
-			catch (SQLException e)
-			{
-				System.out.println("Insert row error."+e);
-			}
-		}
-
-		public Object getValueAt(int rowIndex, int columnIndex)
-		{
-			Object ret = "";
-			try
-			{
-				Class<?> columnClass = getColumnClass(columnIndex);
-
-				getRowSet().absolute(rowIndex+1);
-				Object o = getRowSet().getObject(columnIndex+1);
-				if (null != o)
-				{
-					if (BigDecimal.class.equals(columnClass))
-					{
-						ret = (BigDecimal) o;
-					}
-					else 
-					{
-						ret = o.toString();
-					}
-				}
-			} 
-			catch (SQLException e)
-			{
-				System.out.println("Get data error."+e);
-			}
-			return ret;
-		}
-		
-		public boolean isCellEditable(int rowIndex, int columnIndex)
-		{
-			return false;
-		}
-
-		public void removeTableModelListener(TableModelListener l)
-		{
-			//Empty intentionaly
-		}
-
-		public void updateRow(int rowIndex, IERecord r)
-		{
-			try
-			{
-				getRowSet().absolute(rowIndex+1);
-				getRowSet().updateBigDecimal("amount", r.getAmount());
-				getRowSet().updateString(    "name"  , r.getName()  );
-				getRowSet().updateDate(      "ondate", new java.sql.Date(r.getOndate().getTime()));
-				getRowSet().updateRow();
-			}
-			catch (SQLException e)
-			{
-				System.out.println("Error updating row."+e);
-			}
-		}
-
-		public void setValueAt(Object aValue, int rowIndex, int columnIndex)
-		{
-		}
-	}
-
-	public void rowChanged(RowSetEvent evt)
-	{
-		CachedRowSet currentRowSet = getIETableModel().getRowSet();
-		try
-		{
-			currentRowSet.moveToCurrentRow();
-			setIETableModel(
-					new IncomeExpenseTableModel(
-						getIETableModel().getRowSet()));
-			getTable().setModel(getIETableModel());
-		}
-		catch (SQLException e)
-		{
-			System.out.println("Error constructing table model."+e);
-		}
-	}
-
-	public void cursorMoved(RowSetEvent event)
-	{
-		// intentionally empty
-	}
-	public void rowSetChanged(RowSetEvent event)
-	{
-		// intentionally empty
 	}
 
 	public static class IERecord
@@ -881,26 +507,6 @@ public class HomeCountApp
 		}
 	}
 
-	public IERecord readRow(int rowIndex)
-	{
-		System.out.println("Cached read row");
-		CachedRowSet crs = getIETableModel().getRowSet();
-		IERecord r = new IERecord();
-		try
-		{
-			crs.absolute(rowIndex+1);
-			r = new IERecord(
-					crs.getBigDecimal("amount" ),
-					crs.getString(    "name"   ),
-					crs.getDate(      "ondate" ));
-		}
-		catch (SQLException e)
-		{
-			System.out.println("Error reading row."+e);
-		}
-		return r;
-	}
-
 	//Fills text fields with default data
 	public void clearTextFields()
 	{
@@ -919,56 +525,6 @@ public class HomeCountApp
 	{
 		amountFtf.setValue(ieRecord.getAmount());
 		nameTf.setText(ieRecord.getName());
-		//***
 		ondateFtf.setValue(ieRecord.getOndate());
-	}
-
-	public void syncWithTable()
-	{
-		try
-		{
-			// Must provide connection. Otherwise "Unable to get connection" occurs.
-			getIETableModel().getRowSet().acceptChanges(getConnection());
-		} 
-		catch (SyncProviderException e)
-		{
-			System.out.println("Updating failed."+e);
-			SyncResolver resolver = e.getSyncResolver();
-
-			Object crsValue;  // value in the RowSet object
-			Object resolverValue;  // value in the SyncResolver object
-			Object resolvedValue;  // value to be persisted 
-			try
-			{
-				while(resolver.nextConflict())
-				{
-					if(resolver.getStatus() == SyncResolver.UPDATE_ROW_CONFLICT)
-					{
-						int row = resolver.getRow();
-						CachedRowSet crs = getIETableModel().getRowSet();
-						crs.absolute(row);
-
-						int colCount = crs.getMetaData().getColumnCount();
-						for(int j = 1; j <= colCount; j++) 
-						{
-							if (resolver.getConflictValue(j) != null) 
-							{
-								crsValue = crs.getObject(j);
-								resolverValue = resolver.getConflictValue(j);
-								System.out.format("Crsvalue:%s , resolver:%s", crsValue, resolverValue);
-								// compare crsValue and resolverValue to determine
-								// which should be the resolved value (the value to persist)
-								//resolvedValue = crsValue;
-								//resolver.setResolvedValue(j, resolvedValue);
-							}
-						}
-					}
-				}
-			}
-			catch (SQLException ex)
-			{
-				System.out.println("Exception occured in resolver."+e);
-			}
-		}
 	}
 }
