@@ -13,16 +13,26 @@ import java.sql.SQLException;
  */
 public class RowSetTableModel
 { 
-	RowSet rowSet;
+	RowSetProvider rsp;
 
-	public RowSetTableModel(RowSet rowSet)
+	public RowSetTableModel(RowSetProvider rsp)
 	{
-		this.rowSet = rowSet;
+		this.rsp = rsp;
 	}
 
 	public RowSet getRowSet()
 	{
-		return rowSet;
+		return getRowSetProvider().getRowSet();
+	}
+
+	private RowSetProvider getRowSetProvider()
+	{ 
+		return rsp;
+	}
+
+	public void refreshRowSet()
+	{ 
+		getRowSetProvider().refreshRowSet();
 	}
 
 	public TableModel getTableModel()
@@ -42,6 +52,13 @@ public class RowSetTableModel
 	 * @override
 	 */
 	public void updateRow(Object o)
+	{
+	}
+
+	/**
+	 * @override
+	 */
+	public void insertRow(Object o)
 	{
 	}
 

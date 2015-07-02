@@ -28,14 +28,29 @@ public class TableSelector
 		addListener();
 	}
 
+	public AbstractTableModel getAbstractTableModel()
+	{
+		return (AbstractTableModel) getRowSetTableModel().getTableModel();
+	}
+
+	public void fireTableRowsInserted(int firstRow, int lastRow)
+	{ 
+		getAbstractTableModel().fireTableRowsInserted(firstRow, lastRow);
+	}
+
 	public void fireTableRowsUpdated(int firstRow, int lastRow)
 	{
-		((AbstractTableModel) getRowSetTableModel().getTableModel()).fireTableRowsUpdated(firstRow, lastRow);
+		getAbstractTableModel().fireTableRowsUpdated(firstRow, lastRow);
 	}
 
 	public JTable getTable()
 	{
 		return table;
+	}
+
+	public void setRowSetTableModel(RowSetTableModel rstm)
+	{
+		this.rstm = rstm;
 	}
 
 	public RowSetTableModel getRowSetTableModel()

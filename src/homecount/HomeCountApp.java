@@ -180,7 +180,7 @@ public class HomeCountApp
 	 * Show frame.
 	 */
 	public void prepareFrame()
-	{ 
+	{
 		JFrame frame = new JFrame("Main");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setPreferredSize(
@@ -190,49 +190,103 @@ public class HomeCountApp
 
 		RowSetTableModel tm =
 			new RowSetTableModel(
-				makeRowSet(
-					newStatement(), 
-					"SELECT * FROM income_expense"))
-			{
-				public void updateRow(Object o)
-				{ 
-					RowSet rs = getRowSet();
-					IERecord r = (IERecord) o;
-					try
-					{
-						rs.updateBigDecimal("amount", r.getAmount());
-						rs.updateString(    "name"  , r.getName()  );
-						rs.updateDate(      "ondate", new java.sql.Date(
-									r.getOndate().getTime()));
-						rs.updateRow();
-					}
-					catch (SQLException e)
-					{
-						e.printStackTrace();
-					}
-				}
-
-				public Class getColumnClass(int column)
+				new RowSetProvider()
 				{
-					Class<?> cl = String.class;
-					switch (column)
+					Statement stmt  = newStatement();
+					String    query = "SELECT * FROM income_expense";
+					RowSet    rs    = makeRowSet(); 
+
+					private RowSet makeRowSet()
 					{
-						case 0:
-							cl = Integer.class;
-							break;
-						case 1:
-							cl = BigDecimal.class;
-							break;
-						case 2:
-							cl = String.class;
-							break;
-						case 3:
-							cl = String.class;
-							break;
+						RowSet rowSet = null;
+						try
+						{
+							rowSet = new JdbcRowSetImpl(
+								stmt.executeQuery(query));
+						}
+						catch (SQLException e)
+						{
+							e.printStackTrace();
+						}
+						return rowSet;
 					}
-					return cl;
-				}
-			};
+
+					public void refreshRowSet()
+					{ 
+						System.out.println("Refreshing");
+						setRowSet(makeRowSet());
+					}
+
+					private void setRowSet(RowSet rs)
+					{
+						this.rs = rs;
+					}
+
+					public RowSet getRowSet()
+					{
+						return rs;
+					}
+				})
+				{ 
+					public void insertRow(Object o)
+					{
+						IERecord r = (IERecord) o;
+						RowSet rs = getRowSet();
+						try
+						{
+							rs.last();
+							rs.moveToInsertRow();
+							rs.updateBigDecimal("amount", r.getAmount());
+							rs.updateString    ("name"  , r.getName()  );
+							rs.updateDate      ("ondate", new java.sql.Date(
+										r.getOndate().getTime()));
+							rs.insertRow();
+						}
+						catch (SQLException e)
+						{
+							e.printStackTrace();
+						}
+					}
+
+					public void updateRow(Object o)
+					{ 
+						RowSet rs = getRowSet();
+						IERecord r = (IERecord) o;
+						try
+						{
+							rs.updateBigDecimal("amount", r.getAmount());
+							rs.updateString(    "name"  , r.getName()  );
+							rs.updateDate(      "ondate", new java.sql.Date(
+										r.getOndate().getTime()));
+							rs.updateRow();
+						}
+						catch (SQLException e)
+						{
+							e.printStackTrace();
+						}
+					}
+
+					public Class getColumnClass(int column)
+					{
+						Class<?> cl = String.class;
+						switch (column)
+						{
+							case 0:
+								cl = Integer.class;
+								break;
+							case 1:
+								cl = BigDecimal.class;
+								break;
+							case 2:
+								cl = String.class;
+								break;
+							case 3:
+								cl = String.class;
+								break;
+						}
+						return cl;
+					}
+				};
 
 		JTable tableView = new JTable(tm.getTableModel()); 
 		tableView.setDefaultRenderer(
@@ -394,14 +448,14 @@ public class HomeCountApp
 					public void actionPerformed(ActionEvent evt)
 				    {
 						System.out.println("Inserting row");
-						IERecord ier = readTextFields();
-
-						/*
-						getIETableModel().insertRow(
-							ier.getAmount(), 
-							ier.getName()  ,
-							ier.getOndate());
-						*/ 
+						IERecord ier = readTextFields(); 
+						RowSetTableModel tm = ts.getRowSetTableModel();
+						tm.insertRow(
+							readTextFields());
+						tm.refreshRowSet();  
+						ts.fireTableRowsInserted(
+							tm.getTableModel().getRowCount()+1, 
+							tm.getTableModel().getRowCount()+1);
 					}
 				});
 
