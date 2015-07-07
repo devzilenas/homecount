@@ -25,7 +25,7 @@ public class RowSetTableModel
 		return getRowSetProvider().getRowSet();
 	}
 
-	private RowSetProvider getRowSetProvider()
+	public RowSetProvider getRowSetProvider()
 	{ 
 		return rsp;
 	}
@@ -60,6 +60,27 @@ public class RowSetTableModel
 	 */
 	public void insertRow(Object o)
 	{
+	}
+
+
+	/**
+	 * 0-based indexing
+	 * @returns 0-based index
+	 */
+	public int getColumnIndex(String name)
+	{
+		int index = 0;
+
+		for (int i = getTableModel().getColumnCount() - 1; 0 < i; i--)
+		{
+			if (name.toUpperCase().equals(getTableModel().getColumnName(i).toUpperCase()))
+			{
+				index = i;
+				break;
+			}
+		}
+
+		return index;
 	}
 
 	TableModel tableModel = new AbstractTableModel()
@@ -105,6 +126,10 @@ public class RowSetTableModel
 			return count;
 		}
 
+		/**
+		 * argument is 0-based index
+		 * makes temporary 1-based index
+		 */
 		public String getColumnName(int column)
 		{
 			int col = column + 1; //in JDBC columns start with 1
@@ -121,6 +146,9 @@ public class RowSetTableModel
 			return name;
 		}
 
+		/**
+		 * as arguments expects 0-based indexes
+		 */
 		public Object getValueAt(int row, int column)
 		{
 			RowSet rowSet = getRowSet();

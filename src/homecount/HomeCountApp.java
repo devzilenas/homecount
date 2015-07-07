@@ -1,3 +1,5 @@
+import java.util.LinkedList;
+import java.util.List;
 import javax.swing.JFrame;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -26,6 +28,9 @@ import javax.swing.JTextField;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.ListSelectionModel;
+import javax.swing.AbstractListModel;
+import javax.swing.JComboBox;
+import javax.swing.DefaultComboBoxModel;
 
 import javax.swing.JFormattedTextField;
 import java.text.DateFormat;
@@ -49,12 +54,16 @@ import org.h2.tools.Server;
 import java.util.Observer;
 import java.util.Observable;
 
+import java.util.Set;
+import java.util.HashSet;
+import java.util.TreeSet;
+
 public class HomeCountApp
 {
 	/**
 	 * Main window.
 	 */
-	JFrame frame = null;
+	JFrame     frame = null;
 	Connection connection = null;
 
 	TableSelector ts = null;
@@ -62,6 +71,10 @@ public class HomeCountApp
 	//IERecordUI fields
 	JTextField          nameTf;
 	JFormattedTextField amountFtf, ondateFtf;
+
+	//Filter fields
+	JTextField yearTf, monthTf; 
+	JComboBox<String>  nameList;
 
 	Server dbServer = null;
 
@@ -124,7 +137,7 @@ public class HomeCountApp
 	{
 		try
 		{
-			setDBServer(Server.createTcpServer().start());
+			setDBServer(Server.createTcpServer("-tcpAllowOthers").start());
 		}
 		catch (SQLException e)
 		{
@@ -188,13 +201,71 @@ public class HomeCountApp
 		JPanel panel = new JPanel(new BorderLayout());
 		frame.setContentPane(panel);
 
-		RowSetTableModel tm =
+		final RowSetTableModel tm =
 			new RowSetTableModel(
 				new RowSetProvider()
 				{
 					Statement stmt  = newStatement();
-					String    query = "SELECT * FROM income_expense";
+					String    query = "SELECT * FROM income_expense WHERE YEAR(CONVERT(ondate, TIMESTAMP))=%d AND MONTH(CONVERT(ondate, TIMESTAMP))=%d AND name LIKE '%%%s%%'";
+					Integer   year  = 2015;
+					Integer   month = 6; 
+					String    name  = "";
 					RowSet    rs    = makeRowSet(); 
+					
+					public Set<Observer> observers = new HashSet<>();
+
+					public void addObserver(Observer obs)
+					{
+						this.observers.add(obs);
+					}
+			        
+			        public Set<Observer> getObservers()
+					{
+						return observers;
+					} 
+
+					public Integer getYear()
+					{
+						return year;
+					}
+
+					public void setYear(Integer year)
+					{
+						this.year = year;
+					}
+
+					public void setName(String name)
+					{
+						this.name = name;
+					}
+
+					public String getName()
+					{
+						return name;
+					}
+
+					public void setMonth(Integer month)
+					{
+						this.month = month;
+					}
+
+					public Integer getMonth()
+					{
+						return month;
+					}
+
+			        public void notifyObservers()
+					{
+						for (Observer observer : getObservers())
+						{
+							observer.update(new Observable(){},null);
+						}
+					}
+
+			        private String getQuery()
+					{
+						return String.format(query, getYear(), getMonth(), getName());
+					}
 
 					private RowSet makeRowSet()
 					{
@@ -202,7 +273,7 @@ public class HomeCountApp
 						try
 						{
 							rowSet = new JdbcRowSetImpl(
-								stmt.executeQuery(query));
+								stmt.executeQuery(getQuery()));
 						}
 						catch (SQLException e)
 						{
@@ -220,6 +291,7 @@ public class HomeCountApp
 					private void setRowSet(RowSet rs)
 					{
 						this.rs = rs;
+						notifyObservers();
 					}
 
 					public RowSet getRowSet()
@@ -303,7 +375,84 @@ public class HomeCountApp
 						return super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
 					}
 				});
-		panel.add(new JScrollPane(tableView), BorderLayout.WEST);
+
+		yearTf  = new JTextField();
+		monthTf = new JTextField(); 
+
+		Box tl  = new Box(BoxLayout.Y_AXIS);
+		Box tlf = new Box(BoxLayout.X_AXIS);
+		tlf.add(yearTf);
+		yearTf.addActionListener(
+			new ActionListener()
+			{
+				public void actionPerformed(ActionEvent e)
+				{
+				}
+			});
+
+		tlf.add(monthTf);
+
+		nameList = new JComboBox();
+		nameList.addActionListener(
+			new ActionListener()
+			{
+				public void actionPerformed(ActionEvent e)
+				{
+					JComboBox cb = (JComboBox) e.getSource();
+					String value = (String) cb.getSelectedItem();
+					System.out.format("Selected %s%n", value);
+					RowSetTableModel tm = ts.getRowSetTableModel();
+					RowSetProvider rsp = tm.getRowSetProvider();
+					rsp.setName(value);
+					tm.refreshRowSet();
+				}
+			});
+		tm.getRowSetProvider().addObserver(
+			new Observer()
+			{
+				public void update(Observable o, Object arg)
+				{
+					nameList.setModel( 
+						new DefaultComboBoxModel<String>()
+						{
+							Set<String> dataSet = new TreeSet<String>();
+
+							{
+								int column = tm.getColumnIndex("name");
+								for (int row = 0; row < tm.getTableModel().getRowCount(); row++)
+								{
+									getDataSet().add( 
+										(String)tm.getTableModel().getValueAt(row, column));
+								}
+								fireContentsChanged(this, 0, getDataSet().size());
+							}
+
+							public Set<String> getDataSet()
+							{
+								return dataSet;
+							}
+
+							public String getElementAt(int index)
+							{
+								return (String) getDataSet().toArray()[index];
+							}
+				
+							public int getSize()
+							{
+								return getDataSet().size();
+							}
+
+						}
+					);
+				}
+			});
+		Box listBox = new Box(BoxLayout.X_AXIS);
+		listBox.add(nameList);
+		tl.add(listBox);
+
+		tl.add(tlf);
+		tl.add(new JScrollPane(tableView));
+		panel.add(tl, BorderLayout.WEST);
 
 		ts = new TableSelector(tableView, tm)
 		{
