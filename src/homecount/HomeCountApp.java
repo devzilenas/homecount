@@ -1,3 +1,5 @@
+import javax.swing.JComboBox;
+import java.util.Calendar;
 import java.util.LinkedList;
 import java.util.List;
 import javax.swing.JFrame;
@@ -29,7 +31,6 @@ import javax.swing.event.ListSelectionListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.ListSelectionModel;
 import javax.swing.AbstractListModel;
-import javax.swing.JComboBox;
 import javax.swing.DefaultComboBoxModel;
 
 import javax.swing.JFormattedTextField;
@@ -56,7 +57,6 @@ import java.util.Observable;
 
 import java.util.Set;
 import java.util.HashSet;
-import java.util.TreeSet;
 
 public class HomeCountApp
 {
@@ -73,8 +73,8 @@ public class HomeCountApp
 	JFormattedTextField amountFtf, ondateFtf;
 
 	//Filter fields
-	JTextField yearTf, monthTf; 
-	JComboBox<String>  nameList;
+	JTextField yearTf, nameFTf; 
+	JComboBox<Integer> monthCb = new JComboBox<Integer>(new Integer[]{1,2,3,4,5,6,7,8,9,10,11,12});
 
 	Server dbServer = null;
 
@@ -110,7 +110,6 @@ public class HomeCountApp
 
 	public static void main(String[] args)
 	{
-		System.out.println("It's run!");
 		HomeCountApp hca = new HomeCountApp(); 
 		hca.startTCPServer();
 		hca.connectDB();
@@ -284,7 +283,6 @@ public class HomeCountApp
 
 					public void refreshRowSet()
 					{ 
-						System.out.println("Refreshing");
 						setRowSet(makeRowSet());
 					}
 
@@ -376,80 +374,126 @@ public class HomeCountApp
 					}
 				});
 
-		yearTf  = new JTextField();
-		monthTf = new JTextField(); 
+		yearTf  = new JTextField(""+Calendar.getInstance().get(Calendar.YEAR));
+		monthCb.setSelectedItem(Calendar.getInstance().get(Calendar.MONTH)+1);
+		nameFTf = new JTextField();
 
 		Box tl  = new Box(BoxLayout.Y_AXIS);
 		Box tlf = new Box(BoxLayout.X_AXIS);
-		tlf.add(yearTf);
+
 		yearTf.addActionListener(
 			new ActionListener()
 			{
 				public void actionPerformed(ActionEvent e)
 				{
+					RowSetTableModel tm = ts.getRowSetTableModel();
+					RowSetProvider rsp  = tm.getRowSetProvider();
+					Integer year = Integer.valueOf(yearTf.getText());
+					rsp.setYear(year);
+					tm.refreshRowSet();  
+					ts.fireTableDataChanged();
 				}
 			});
 
-		tlf.add(monthTf);
-
-		nameList = new JComboBox();
-		nameList.addActionListener(
+		monthCb.addActionListener(
 			new ActionListener()
 			{
 				public void actionPerformed(ActionEvent e)
 				{
-					JComboBox cb = (JComboBox) e.getSource();
-					String value = (String) cb.getSelectedItem();
-					System.out.format("Selected %s%n", value);
 					RowSetTableModel tm = ts.getRowSetTableModel();
-					RowSetProvider rsp = tm.getRowSetProvider();
-					rsp.setName(value);
-					tm.refreshRowSet();
+					RowSetProvider rsp  = tm.getRowSetProvider();
+					Integer month = (Integer) monthCb.getSelectedItem();
+					rsp.setMonth(month);
+					tm.refreshRowSet();  
+					ts.fireTableDataChanged();
 				}
 			});
+
+		nameFTf.addActionListener(
+			new ActionListener()
+			{
+				public void actionPerformed(ActionEvent e)
+				{
+					RowSetTableModel tm = ts.getRowSetTableModel();
+					RowSetProvider rsp  = tm.getRowSetProvider();
+					String name         = nameFTf.getText();
+					rsp.setName(name);
+					tm.refreshRowSet();  
+					ts.fireTableDataChanged();
+				}
+			});
+
+		JPanel fp = new JPanel(new GridBagLayout());
+
+		GridBagConstraints c = new GridBagConstraints();
+		c.fill      = GridBagConstraints.HORIZONTAL;
+		c.anchor    = GridBagConstraints.LINE_START;
+		c.weightx   = 0.25;
+		c.weighty   = 0;
+		c.gridx     = 0;
+		c.gridy     = 0;
+		c.gridwidth = 1;
+		fp.add(new JLabel("Year"), c);
+
+		c           = new GridBagConstraints();
+		c.fill      = GridBagConstraints.HORIZONTAL;
+		c.anchor    = GridBagConstraints.LINE_END;
+		c.weightx   = 0.75;
+		c.weighty   = 0;
+		c.gridx     = 1;
+		c.gridy     = 0;
+		c.gridwidth = 1;
+		fp.add(yearTf, c);
+
+		c           = new GridBagConstraints();
+		c.fill      = GridBagConstraints.HORIZONTAL;
+		c.anchor    = GridBagConstraints.LINE_START;
+		c.weightx   = 0.25;
+		c.weighty   = 0;
+		c.gridx     = 0;
+		c.gridy     = 1;
+		c.gridwidth = 1;
+		fp.add(new JLabel("Month"), c);
+
+		c           = new GridBagConstraints();
+		c.fill      = GridBagConstraints.HORIZONTAL;
+		c.anchor    = GridBagConstraints.LINE_END;
+		c.weightx   = 0.75;
+		c.weighty   = 0;
+		c.gridx     = 1;
+		c.gridy     = 1;
+		c.gridwidth = 1;
+		fp.add(monthCb, c);
+
+		c           = new GridBagConstraints();
+		c.fill      = GridBagConstraints.HORIZONTAL;
+		c.anchor    = GridBagConstraints.LINE_START;
+		c.weightx   = 0.25;
+		c.weighty   = 0;
+		c.gridx     = 0;
+		c.gridy     = 2;
+		c.gridwidth = 1;
+		fp.add(new JLabel("Name"), c);
+
+		c           = new GridBagConstraints();
+		c.fill      = GridBagConstraints.HORIZONTAL;
+		c.anchor    = GridBagConstraints.LINE_END;
+		c.weightx   = 0.75;
+		c.weighty   = 0;
+		c.gridx     = 1;
+		c.gridy     = 2;
+		c.gridwidth = 1;
+		fp.add(nameFTf, c);
+
 		tm.getRowSetProvider().addObserver(
 			new Observer()
 			{
 				public void update(Observable o, Object arg)
 				{
-					nameList.setModel( 
-						new DefaultComboBoxModel<String>()
-						{
-							Set<String> dataSet = new TreeSet<String>();
-
-							{
-								int column = tm.getColumnIndex("name");
-								for (int row = 0; row < tm.getTableModel().getRowCount(); row++)
-								{
-									getDataSet().add( 
-										(String)tm.getTableModel().getValueAt(row, column));
-								}
-								fireContentsChanged(this, 0, getDataSet().size());
-							}
-
-							public Set<String> getDataSet()
-							{
-								return dataSet;
-							}
-
-							public String getElementAt(int index)
-							{
-								return (String) getDataSet().toArray()[index];
-							}
-				
-							public int getSize()
-							{
-								return getDataSet().size();
-							}
-
-						}
-					);
 				}
 			});
-		Box listBox = new Box(BoxLayout.X_AXIS);
-		listBox.add(nameList);
-		tl.add(listBox);
 
+		tlf.add(fp);
 		tl.add(tlf);
 		tl.add(new JScrollPane(tableView));
 		panel.add(tl, BorderLayout.WEST);
@@ -486,12 +530,42 @@ public class HomeCountApp
 				}
 			});
 
-		JButton button1 = new JButton("Action 1.");
+		JButton button1 = new JButton("Filter");
+		tlf.add(button1);
 		button1.addActionListener(
 				new ActionListener()
 				{
 					public void actionPerformed(ActionEvent e)
-					{
+					{ 
+						RowSetTableModel tm = ts.getRowSetTableModel(); 
+						RowSetProvider rsp  = tm.getRowSetProvider();
+						rsp.setName(nameFTf.getText());
+						rsp.setYear(parseInt(yearTf.getText(), 2015));
+						rsp.setMonth((Integer) monthCb.getSelectedItem());
+						tm.refreshRowSet();  
+						ts.fireTableDataChanged();
+					}
+				});
+
+		JButton button3 = new JButton("Reset");
+		tlf.add(button3);
+		button3.addActionListener(
+				new ActionListener()
+				{
+					public void actionPerformed(ActionEvent e)
+					{ 
+						Calendar cal = Calendar.getInstance();
+						nameFTf.setText("");
+						yearTf.setText(""+cal.get(Calendar.YEAR));
+						monthCb.setSelectedItem(cal.get(Calendar.MONTH)+1);
+
+						RowSetTableModel tm = ts.getRowSetTableModel(); 
+						RowSetProvider rsp  = tm.getRowSetProvider();
+						rsp.setName(nameFTf.getText());
+						rsp.setYear(Integer.valueOf(yearTf.getText()));
+						rsp.setMonth((Integer) monthCb.getSelectedItem());
+						tm.refreshRowSet();  
+						ts.fireTableDataChanged();
 					}
 				});
 		JButton button2 = new JButton("Action 2");
@@ -503,8 +577,8 @@ public class HomeCountApp
 					}
 				});
 		Box buttonBox = new Box(BoxLayout.PAGE_AXIS);
-		buttonBox.add(button1);
 		buttonBox.add(button2);
+	
 		panel.add(buttonBox, BorderLayout.EAST);
 
 		//Record pane
@@ -523,7 +597,7 @@ public class HomeCountApp
 
 		JPanel rp = new JPanel(new GridBagLayout());
 
-		GridBagConstraints c = new GridBagConstraints();
+		c = new GridBagConstraints();
 		c.fill      = GridBagConstraints.HORIZONTAL;
 		c.anchor    = GridBagConstraints.LINE_START;
 		c.weightx   = 0.25;
@@ -584,13 +658,29 @@ public class HomeCountApp
 		rp.add(ondateFtf, c);
 
 		Box rpBBx = new Box(BoxLayout.X_AXIS);
+		JButton newRow    = new JButton("New row");
 		JButton insertRow = new JButton("Insert row");
 		JButton updateRow = new JButton("Update row");
 		JButton deleteRow = new JButton("Delete row");
+		rpBBx.add(newRow);
 		rpBBx.add(insertRow);
 		rpBBx.add(updateRow);
 		rpBBx.add(deleteRow);
 
+		newRow.addActionListener(
+			new ActionListener()
+			{
+				public void actionPerformed(ActionEvent evt)
+				{
+					Calendar cal = Calendar.getInstance();
+					IERecord r = new IERecord(
+						BigDecimal.ZERO, 
+						""             ,
+						new java.sql.Date(System.currentTimeMillis()));
+					setTextFields(r);
+				}
+			}
+		);
 		insertRow.addActionListener(
 				new ActionListener()
 				{
@@ -729,5 +819,19 @@ public class HomeCountApp
 		amountFtf.setValue(ieRecord.getAmount());
 		nameTf.setText(ieRecord.getName());
 		ondateFtf.setValue(ieRecord.getOndate());
+	}
+
+	public Integer parseInt(String value, Integer defVal)
+	{
+		int retVal;
+		try
+		{
+			retVal = Integer.valueOf(value);
+		}
+		catch (NumberFormatException e)
+		{
+			retVal = defVal;
+		} 
+		return retVal;
 	}
 }

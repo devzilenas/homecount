@@ -33,6 +33,11 @@ public class TableSelector
 		return (AbstractTableModel) getRowSetTableModel().getTableModel();
 	}
 
+	public void fireTableDataChanged()
+	{
+		getAbstractTableModel().fireTableDataChanged();
+	}
+
 	public void fireTableRowsInserted(int firstRow, int lastRow)
 	{ 
 		getAbstractTableModel().fireTableRowsInserted(firstRow, lastRow);
