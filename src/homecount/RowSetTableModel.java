@@ -62,6 +62,12 @@ public class RowSetTableModel
 	{
 	}
 
+	/**
+	 * @override
+	 */
+	public void deleteRow()
+	{
+	}
 
 	/**
 	 * 0-based indexing

@@ -33,6 +33,11 @@ public class TableSelector
 		return (AbstractTableModel) getRowSetTableModel().getTableModel();
 	}
 
+	public void fireTableRowsDeleted(int firstRow, int lastRow) 
+	{
+		getAbstractTableModel().fireTableRowsDeleted(firstRow, lastRow);
+	} 
+
 	public void fireTableDataChanged()
 	{
 		getAbstractTableModel().fireTableDataChanged();
