@@ -26,7 +26,7 @@ public class HomeCountApp
 	TableSelector ts = null;
 
 	//IERecordUI fields
-	JTextField          nameTf;
+	JTextField          nameTf, categoryTf;
 	JFormattedTextField amountFtf, ondateFtf;
 
 	//Filter fields
@@ -279,6 +279,7 @@ public class HomeCountApp
 							rs.updateString    ("name"  , r.getName()  );
 							rs.updateDate      ("ondate", new java.sql.Date(
 										r.getOndate().getTime()));
+							rs.updateString("category", r.getCategory());
 							rs.insertRow();
 						}
 						catch (SQLException e)
@@ -293,10 +294,10 @@ public class HomeCountApp
 						IERecord r = (IERecord) o;
 						try
 						{
-							rs.updateBigDecimal("amount", r.getAmount());
-							rs.updateString(    "name"  , r.getName()  );
-							rs.updateDate(      "ondate", new java.sql.Date(
-										r.getOndate().getTime()));
+							rs.updateBigDecimal("amount"   , r.getAmount());
+							rs.updateString(    "name"     , r.getName()  );
+							rs.updateDate  (    "ondate"   , new java.sql.Date(r.getOndate().getTime()));
+							rs.updateString(    "category", r.getCategory());
 							rs.updateRow();
 						}
 						catch (SQLException e)
@@ -530,7 +531,8 @@ public class HomeCountApp
 					return new IERecord(
 						rs.getBigDecimal("amount" ),
 						rs.getString    ("name"   ),
-						rs.getDate      ("ondate" ));
+						rs.getDate      ("ondate" ),
+						rs.getCategory  ("category"));
 				} 
 				catch (SQLException e)
 				{
@@ -595,7 +597,8 @@ public class HomeCountApp
 		//For reference see p. 568 in "Java Swing the definitive guide".
 		DateFormat    displayFormat    = new SimpleDateFormat("yyyy-MM-dd");
 		DateFormatter displayFormatter = new DateFormatter(displayFormat);
-		ondateFtf = new JFormattedTextField(displayFormatter);
+		ondateFtf  = new JFormattedTextField(displayFormatter);
+		categoryTf = new JTextField();
 		//clear all fields: get them filled with default values.
 		clearTextFields();
 
@@ -661,6 +664,26 @@ public class HomeCountApp
 		c.gridwidth = 1;
 		rp.add(ondateFtf, c);
 
+		c           = new GridBagConstraints();
+		c.fill      = GridBagConstraints.HORIZONTAL;
+		c.anchor    = GridBagConstraints.LINE_START;
+		c.weightx   = 0.25;
+		c.weighty   = 0;
+		c.gridx     = 0;
+		c.gridy     = 3;
+		c.gridwidth = 1;
+		rp.add(new JLabel("Category"), c);
+
+		c           = new GridBagConstraints();
+		c.fill      = GridBagConstraints.HORIZONTAL;
+		c.anchor    = GridBagConstraints.LINE_END;
+		c.weightx   = 0.75;
+		c.weighty   = 0;
+		c.gridx     = 1;
+		c.gridy     = 3;
+		c.gridwidth = 1;
+		rp.add(categoryTf, c);
+
 		Box rpBBx = new Box(BoxLayout.X_AXIS);
 		JButton newRow    = new JButton("New row");
 		JButton insertRow = new JButton("Insert row");
@@ -680,7 +703,8 @@ public class HomeCountApp
 					IERecord r = new IERecord(
 						BigDecimal.ZERO, 
 						""             ,
-						new java.sql.Date(System.currentTimeMillis()));
+						new java.sql.Date(System.currentTimeMillis()),
+						"");
 					setTextFields(r);
 				}
 			}
@@ -768,24 +792,27 @@ public class HomeCountApp
 		BigDecimal     amount = BigDecimal.ZERO;
 		String         name   = "";
 		java.util.Date ondate = new java.util.Date();
+		String         category = "";
 
 		public IERecord()
 		{
 		}
 
-		public IERecord(Integer id, BigDecimal amount, String name, java.util.Date ondate)
+		public IERecord(Integer id, BigDecimal amount, String name, java.util.Date ondate, String category)
 		{
 			this.id = id;
 			this.amount = amount;
 			this.name   = name  ;
 			this.ondate = ondate;
+			this.category = category;
 		}
 
-		public IERecord(BigDecimal amount, String name, java.util.Date ondate)
+		public IERecord(BigDecimal amount, String name, java.util.Date ondate, String category)
 		{
 			this.amount = amount;
 			this.name   = name  ;
 			this.ondate = ondate;
+			this.category = category;
 		}
 
 		public BigDecimal getAmount()
@@ -803,6 +830,11 @@ public class HomeCountApp
 			return ondate;
 		}
 		
+		public String getCategory()
+		{
+			return category;
+		}
+
 		public String toString()
 		{
 			DecimalFormat formatter = new DecimalFormat("0.00");
@@ -811,7 +843,7 @@ public class HomeCountApp
 					getOndate(),
 					formatter.format((Number) getAmount()), 
 					getName()
-					);
+					getCategory());
 		}
 	}
 
@@ -826,14 +858,16 @@ public class HomeCountApp
 		return new IERecord(
 				new BigDecimal(((Number)amountFtf.getValue()).doubleValue()), 
 				nameTf.getText(),
-				(java.util.Date) ondateFtf.getValue());
+				(java.util.Date) ondateFtf.getValue(),
+				categoryTf.getValue());
 	}
 
 	public void setTextFields(IERecord ieRecord)
 	{
-		amountFtf.setValue(ieRecord.getAmount());
-		nameTf.setText(ieRecord.getName());
-		ondateFtf.setValue(ieRecord.getOndate());
+		amountFtf.setValue ( ieRecord.getAmount());
+		nameTf.setText     ( ieRecord.getName());
+		ondateFtf.setValue ( ieRecord.getOndate());
+		categoryTf.setValue(ieRecord.getCategory());
 	}
 
 	public Integer parseInt(String value, Integer defVal)
