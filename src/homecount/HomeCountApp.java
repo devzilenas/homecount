@@ -24,13 +24,16 @@ public class HomeCountApp
 	Connection connection = null;
 
 	TableSelector ts = null;
+	CategoryTableSelector cts = null;
+
+	JTabbedPane tpane = new JTabbedPane(JTabbedPane.TOP);
 
 	//IERecordUI fields
 	JTextField          nameTf, categoryTf;
 	JFormattedTextField amountFtf, ondateFtf;
 
 	//Filter fields
-	JComboBox  nameCb = new JComboBox<String>(new String[]{""});
+	JComboBox<String> nameCb = new JComboBox<>(new String[]{""});
 	JSpinner   yearSp = new JSpinner(
 			new SpinnerNumberModel(
 				Calendar.getInstance().get(Calendar.YEAR),
@@ -38,6 +41,11 @@ public class HomeCountApp
 				Calendar.getInstance().get(Calendar.YEAR) + 100,
 				1));
 	JSpinner monthSp = new JSpinner(new SpinnerNumberModel(1,1,12,1));
+
+	/**
+	 * Category fields
+	 */
+	JTextField catnameTf, parcatTf;
 
 	Server dbServer = null;
 
@@ -146,8 +154,9 @@ public class HomeCountApp
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setPreferredSize(
 				new Dimension(600, 800));
+		frame.setContentPane(tpane);
+
 		JPanel panel = new JPanel(new BorderLayout());
-		frame.setContentPane(panel);
 
 		final RowSetTableModel tm =
 			new RowSetTableModel(
@@ -254,7 +263,7 @@ public class HomeCountApp
 						return rs;
 					}
 				})
-				{ 
+				{
 					public void deleteRow()
 					{
 						try
@@ -532,7 +541,7 @@ public class HomeCountApp
 						rs.getBigDecimal("amount" ),
 						rs.getString    ("name"   ),
 						rs.getDate      ("ondate" ),
-						rs.getCategory  ("category"));
+						rs.getString    ("category"));
 				} 
 				catch (SQLException e)
 				{
@@ -556,36 +565,24 @@ public class HomeCountApp
 		JButton button3 = new JButton("Reset");
 		tlf.add(button3);
 		button3.addActionListener(
-				new ActionListener()
-				{
-					public void actionPerformed(ActionEvent e)
-					{ 
-						Calendar cal = Calendar.getInstance();
-						nameCb.setSelectedItem("");
-						yearSp.setValue(cal.get(Calendar.YEAR));
-						monthSp.setValue(cal.get(Calendar.MONTH)+1);
+			new ActionListener()
+			{
+				public void actionPerformed(ActionEvent e)
+				{ 
+					Calendar cal = Calendar.getInstance();
+					nameCb.setSelectedItem("");
+					yearSp.setValue(cal.get(Calendar.YEAR));
+					monthSp.setValue(cal.get(Calendar.MONTH)+1);
 
-						RowSetTableModel tm = ts.getRowSetTableModel(); 
-						RowSetProvider rsp  = tm.getRowSetProvider();
-						rsp.setName("");
-						rsp.setYear(((SpinnerNumberModel) yearSp.getModel()).getNumber().intValue());
-						rsp.setMonth(((SpinnerNumberModel) monthSp.getModel()).getNumber().intValue());
-						tm.refreshRowSet();  
-						ts.fireTableDataChanged();
-					}
-				});
-		JButton button2 = new JButton("Action 2");
-		button2.addActionListener(
-				new ActionListener()
-				{
-					public void actionPerformed(ActionEvent e)
-					{
-					}
-				});
-		Box buttonBox = new Box(BoxLayout.PAGE_AXIS);
-		buttonBox.add(button2);
-	
-		panel.add(buttonBox, BorderLayout.EAST);
+					RowSetTableModel tm = ts.getRowSetTableModel(); 
+					RowSetProvider rsp  = tm.getRowSetProvider();
+					rsp.setName("");
+					rsp.setYear(((SpinnerNumberModel) yearSp.getModel()).getNumber().intValue());
+					rsp.setMonth(((SpinnerNumberModel) monthSp.getModel()).getNumber().intValue());
+					tm.refreshRowSet();  
+					ts.fireTableDataChanged();
+				}
+			});
 
 		//Record pane
 		NumberFormat nf = NumberFormat.getNumberInstance();
@@ -775,15 +772,236 @@ public class HomeCountApp
 
 		c           = new GridBagConstraints();
 		c.fill      = GridBagConstraints.HORIZONTAL;
-		c.gridy     = 3;
+		c.gridy     = 4;
 		c.gridwidth = GridBagConstraints.REMAINDER;
 		rp.add(rpBBx, c);
 
 		panel.add(rp, BorderLayout.SOUTH); 
 
+		tpane.addTab("Expenses", panel);
+
+		/**
+		 * Setup categories panel.
+		 */
+		JPanel catPanel = new JPanel();
+		catPanel.setLayout(new BoxLayout(catPanel, BoxLayout.Y_AXIS));
+
+		JTable catTable = new JTable(
+			new CategoryTableModel(
+				new ConnectionProvider()
+				{
+					public Connection getConnection() 
+					{
+						return getConnection();
+					}
+				})
+			{
+				public Object readRow(int selected)
+				{
+					try
+					{
+						RowSet rs = getRowSet();
+						rs.absolute(selected + 1);
+						return new Category(
+								rs.getString("catname"),
+								rs.getInt("parid")
+							);
+					} 
+					catch (SQLException e)
+					{
+						e.printStackTrace();
+					}
+					return null;
+				}
+				public Statement getStatement()
+				{
+					return newStatement();
+				}
+			})
+			{
+				@Override
+				public TableCellEditor getCellEditor(int row, int column)
+				{
+				   Object value = super.getValueAt(row, column);
+				   if (null != value)
+				   {
+					  if (value instanceof JComboBox)
+					  {
+						   return new DefaultCellEditor((JComboBox)value);
+					  }
+					  return getDefaultEditor(value.getClass());
+				   }
+				   return super.getCellEditor(row, column);
+				}
+			};
+
+		cts = new CategoryTableSelector(catTable, (CategoryTableModel) catTable.getModel())
+		{ 
+			@Override
+			public Object readRow(int selected)
+			{
+				try
+				{
+					RowSet rs = getTableModel().getRowSet();
+					rs.absolute(selected + 1);
+					return new Category(
+							rs.getString("catname"),
+							rs.getInt("parcatid")
+						);
+				} 
+				catch (SQLException e)
+				{
+					e.printStackTrace();
+				}
+				return null;
+			}
+		};
+		cts.addObserver(
+			new Observer()
+			{
+				public void update(Observable o, Object arg)
+				{
+					CategoryTableSelector cts = (CategoryTableSelector) o;
+					Category c = (Category) cts.getCurrent();
+					System.out.format("Current updated %s %n", c);
+					setCategoryTextFields(c);
+				}
+			});
+
+		catPanel.add(new JScrollPane(catTable));
+
+		catnameTf = new JTextField();
+		parcatTf  = new JTextField();
+
+		JPanel f2p = new JPanel(new GridBagLayout());
+
+		c = new GridBagConstraints();
+		c.fill      = GridBagConstraints.HORIZONTAL;
+		c.anchor    = GridBagConstraints.LINE_START;
+		c.weightx   = 0.25;
+		c.weighty   = 0;
+		c.gridx     = 0;
+		c.gridy     = 0;
+		c.gridwidth = 1;
+		f2p.add(new JLabel("Name"), c);
+
+		c           = new GridBagConstraints();
+		c.fill      = GridBagConstraints.HORIZONTAL;
+		c.anchor    = GridBagConstraints.LINE_END;
+		c.weightx   = 0.75;
+		c.weighty   = 0;
+		c.gridx     = 1;
+		c.gridy     = 0;
+		c.gridwidth = 1;
+		f2p.add(catnameTf, c);
+
+		c           = new GridBagConstraints();
+		c.fill      = GridBagConstraints.HORIZONTAL;
+		c.anchor    = GridBagConstraints.LINE_START;
+		c.weightx   = 0.25;
+		c.weighty   = 0;
+		c.gridx     = 0;
+		c.gridy     = 1;
+		c.gridwidth = 1;
+		f2p.add(new JLabel("Parent"), c);
+
+		c           = new GridBagConstraints();
+		c.fill      = GridBagConstraints.HORIZONTAL;
+		c.anchor    = GridBagConstraints.LINE_END;
+		c.weightx   = 0.75;
+		c.weighty   = 0;
+		c.gridx     = 1;
+		c.gridy     = 1;
+		c.gridwidth = 1;
+		f2p.add(parcatTf, c);
+
+		catPanel.add(f2p);
+
+		Box b2L = new Box(BoxLayout.X_AXIS);
+		b2L.add(new JButton("Insert row"));
+		b2L.add(new JButton("Delete row"));
+		b2L.add(new JButton("Update row"));
+		b2L.add(new JButton("Close"));
+		catPanel.add(b2L);
+
+		tpane.addTab("Categories", catPanel);
+
+		tpane.addChangeListener(
+			new ChangeListener()
+			{
+				public void stateChanged(ChangeEvent e)
+				{ 
+					JTabbedPane tp = (JTabbedPane) e.getSource();
+					System.out.format("Selected pane %d %n", tp.getSelectedIndex());
+				}
+			});
+
 		frame.setVisible(true);
 		frame.pack();
 		setFrame(frame);
+	}
+
+	public static class Category
+	{
+		String   name  ;
+		Integer  id    ;
+		Integer  parid ;
+		Category parent;
+
+		public Category()
+		{
+		}
+
+		public Category(String name)
+		{
+			setName(name);
+		}
+
+		public Category(String name, Integer parid)
+		{
+			setName(name);
+			setParid(parid);
+		}
+
+		public void setName(String name)
+		{
+			this.name = name;
+		}
+
+		public String getName()
+		{
+			return name;
+		}
+
+		public void setId(Integer id)
+		{
+			this.id = id;
+		}
+
+		public void setParid(Integer parid)
+		{
+			this.parid = parid;
+		}
+		
+		public Integer getParid()
+		{
+			return parid;
+		}
+
+		public void setParent(Category parent)
+		{
+			this.parent = parent;
+		}
+
+		public Category getParent()
+		{
+			return parent;
+		} 
+
+		public String toString()
+		{
+			return "" + getName() + ";parid: " + getParid();
+		}
 	}
 
 	public static class IERecord
@@ -842,7 +1060,7 @@ public class HomeCountApp
 					"%tF;%s;%s", 
 					getOndate(),
 					formatter.format((Number) getAmount()), 
-					getName()
+					getName(),
 					getCategory());
 		}
 	}
@@ -859,17 +1077,23 @@ public class HomeCountApp
 				new BigDecimal(((Number)amountFtf.getValue()).doubleValue()), 
 				nameTf.getText(),
 				(java.util.Date) ondateFtf.getValue(),
-				categoryTf.getValue());
+				categoryTf.getText());
 	}
 
 	public void setTextFields(IERecord ieRecord)
 	{
-		amountFtf.setValue ( ieRecord.getAmount());
-		nameTf.setText     ( ieRecord.getName());
-		ondateFtf.setValue ( ieRecord.getOndate());
-		categoryTf.setValue(ieRecord.getCategory());
+		amountFtf.setValue( ieRecord.getAmount());
+		nameTf.setText    ( ieRecord.getName());
+		ondateFtf.setValue( ieRecord.getOndate());
+		categoryTf.setText(ieRecord.getCategory());
 	}
 
+	public void setCategoryTextFields(Category cat)
+	{
+		catnameTf.setText(cat.getName());
+		parcatTf.setText("" + cat.getParid());
+	}
+	 
 	public Integer parseInt(String value, Integer defVal)
 	{
 		int retVal;

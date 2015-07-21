@@ -102,6 +102,9 @@ public class TableSelector
 			});
 	}
 
+	/**
+	 * For @override
+	 */
 	public Object readRow(int selected)
 	{
 		return null;

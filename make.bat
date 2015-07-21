@@ -4,7 +4,7 @@ RMDIR /S /Q classes
 mkdir classes
 
 REM Compiling
-javac -classpath jars\h2-1.4.187.jar;jars\sqljdbc4.jar -sourcepath src\homecount -d classes src\%proj%\HomeCountApp.java 
+javac -Xlint:unchecked -classpath jars\h2-1.4.187.jar;jars\sqljdbc4.jar -sourcepath src\homecount -d classes src\%proj%\HomeCountApp.java 
 mkdir jars
 del jars\%proj%.jar
 REM Making jar
