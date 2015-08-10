@@ -1,3 +1,4 @@
+import java.util.*;
 import javax.swing.table.*;
 import java.sql.*;
 import javax.sql.*;
@@ -9,15 +10,28 @@ import javax.sql.rowset.spi.SyncResolver;
 public class CategoryTableModel
 	extends AbstractTableModel
 {
-	String query = "SELECT c.*, cp.catname as \"parname\", cp.id as \"parcatid\" FROM category c INNER JOIN category cp ON c.parcat = cp.id ORDER BY catname DESC";
+	String query = "SELECT c.id, c.catname, c.parcatid FROM category c";
 
 	RowSet             rs ;
 	ConnectionProvider conp;
+	List<Category> data = new LinkedList<>();
+	Map<Integer, Category> categories = new HashMap<>();
 
 	public CategoryTableModel(ConnectionProvider conp)
 	{
 		this.conp = conp;
 		this.rs   = makeRowSet();
+		makeData();
+	}
+
+	private Map<Integer, Category> getCategories()
+	{
+		return categories;
+	}
+
+	public List<Category> getData()
+	{
+		return data;
 	}
 
 	/**
@@ -28,10 +42,37 @@ public class CategoryTableModel
 		return null;
 	}
 
-	public String getQuery()
+	public String getQuery() 
 	{
 		return query;
-	} 
+	}
+
+	private void makeData()
+	{
+		RowSet rs = getRowSet();
+
+		try
+		{
+			while (rs.next())
+			{
+				Category cat = new Category(
+						rs.getInt(1), rs.getString(2), rs.getInt(3));
+				categories.put(cat.getId(), cat);
+			}
+		}
+		catch (SQLException e)
+		{
+			e.printStackTrace();
+		}
+
+		for (Category cat : categories.values())
+		{
+			cat.setParent(
+					categories.get(
+						cat.getParId()));
+		}
+		data = new LinkedList<>(categories.values());
+	}
 
 	public RowSet makeRowSet()
 	{
@@ -75,38 +116,12 @@ public class CategoryTableModel
 
 	public int getColumnCount()
 	{
-		int count = 0;
-		try 
-		{
-			count = getRowSet().getMetaData().getColumnCount();
-		}
-		catch (SQLException e)
-		{
-			e.printStackTrace();
-		}
-		return count;
+		return 3;
 	}
 
 	public int getRowCount()
 	{
-		RowSet rowSet = getRowSet();
-		try
-		{
-			int currentRow = rowSet.getRow();
-			rowSet.last();
-			int lastRow    = rowSet.getRow();
-
-			if (0 < currentRow)
-			{
-				rowSet.absolute(currentRow);
-			}
-			return lastRow;
-		}
-		catch (SQLException e)
-		{
-			e.printStackTrace();
-			return 0;
-		}
+		return data.size();
 	}
 
 	/**
@@ -114,36 +129,38 @@ public class CategoryTableModel
 	 */
 	public Object getValueAt(int row, int column)
 	{
-		RowSet rowSet = getRowSet();
-		Object value  = null;
-		try 
+		Object value = null;
+		Category cat = data.get(row);
+		switch (column)
 		{
-			rowSet.absolute(row + 1);
-			value = rowSet.getObject(column + 1);
+			case 0:
+				value = cat.getId();
+				break;
+			case 1:
+				value = cat.getName();
+				break;
+			case 2:
+				value = cat.getParId();
+				break;
 		}
-		catch (SQLException e)
-		{
-			e.printStackTrace();
-		}
+
 		return value;
 	}
 
-	/**
-	 * argument is 0-based index
-	 * makes temporary 1-based index
-	 */
 	public String getColumnName(int column)
 	{
-		int col = column + 1; //in JDBC columns start with 1
 		String name = "";
-		try 
+		switch (column)
 		{
-			name = getRowSet().getMetaData().getColumnLabel(col);
-		}
-		catch (SQLException e)
-		{
-			name = super.getColumnName(column);
-			e.printStackTrace();
+			case 0:
+				name = "Id";
+				break;
+			case 1:
+				name = "Name";
+				break;
+			case 2:
+				name = "ParId";
+				break;
 		}
 		return name;
 	}

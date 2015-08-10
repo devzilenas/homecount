@@ -798,20 +798,7 @@ public class HomeCountApp
 			{
 				public Object readRow(int selected)
 				{
-					try
-					{
-						RowSet rs = getRowSet();
-						rs.absolute(selected + 1);
-						return new Category(
-								rs.getString("catname"),
-								rs.getInt("parid")
-							);
-					} 
-					catch (SQLException e)
-					{
-						e.printStackTrace();
-					}
-					return null;
+					return getData().get(selected);
 				}
 				public Statement getStatement()
 				{
@@ -840,22 +827,10 @@ public class HomeCountApp
 			@Override
 			public Object readRow(int selected)
 			{
-				try
-				{
-					RowSet rs = getTableModel().getRowSet();
-					rs.absolute(selected + 1);
-					return new Category(
-							rs.getString("catname"),
-							rs.getInt("parcatid")
-						);
-				} 
-				catch (SQLException e)
-				{
-					e.printStackTrace();
-				}
-				return null;
+				return getTableModel().getData().get(selected);
 			}
 		};
+
 		cts.addObserver(
 			new Observer()
 			{
@@ -939,69 +914,6 @@ public class HomeCountApp
 		frame.setVisible(true);
 		frame.pack();
 		setFrame(frame);
-	}
-
-	public static class Category
-	{
-		String   name  ;
-		Integer  id    ;
-		Integer  parid ;
-		Category parent;
-
-		public Category()
-		{
-		}
-
-		public Category(String name)
-		{
-			setName(name);
-		}
-
-		public Category(String name, Integer parid)
-		{
-			setName(name);
-			setParid(parid);
-		}
-
-		public void setName(String name)
-		{
-			this.name = name;
-		}
-
-		public String getName()
-		{
-			return name;
-		}
-
-		public void setId(Integer id)
-		{
-			this.id = id;
-		}
-
-		public void setParid(Integer parid)
-		{
-			this.parid = parid;
-		}
-		
-		public Integer getParid()
-		{
-			return parid;
-		}
-
-		public void setParent(Category parent)
-		{
-			this.parent = parent;
-		}
-
-		public Category getParent()
-		{
-			return parent;
-		} 
-
-		public String toString()
-		{
-			return "" + getName() + ";parid: " + getParid();
-		}
 	}
 
 	public static class IERecord
@@ -1091,7 +1003,7 @@ public class HomeCountApp
 	public void setCategoryTextFields(Category cat)
 	{
 		catnameTf.setText(cat.getName());
-		parcatTf.setText("" + cat.getParid());
+		parcatTf.setText("" + cat.getParId());
 	}
 	 
 	public Integer parseInt(String value, Integer defVal)
