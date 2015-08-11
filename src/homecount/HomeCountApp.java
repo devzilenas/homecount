@@ -22,6 +22,7 @@ public class HomeCountApp
 	 */
 	JFrame     frame = null;
 	Connection connection = null;
+	StatementProvider sp = null;
 
 	TableSelector ts = null;
 	CategoryTableSelector cts = null;
@@ -46,6 +47,7 @@ public class HomeCountApp
 	 * Category fields
 	 */
 	JTextField catnameTf, parcatTf;
+	JComboBox catParentCb;
 
 	Server dbServer = null;
 
@@ -62,6 +64,16 @@ public class HomeCountApp
 	public Connection getConnection()
 	{
 		return connection;
+	}
+
+	public void setStatementProvider(StatementProvider sp)
+	{
+		this.sp = sp;
+	}
+
+	public StatementProvider getStatementProvider()
+	{
+		return sp;
 	}
 
 	public JFrame getFrame()
@@ -133,6 +145,14 @@ public class HomeCountApp
 			Class.forName("org.h2.Driver");
 			setConnection(
 					DriverManager.getConnection("jdbc:h2:tcp://localhost/~/homecount;DB_CLOSE_ON_EXIT=FALSE", "sa", "")); 
+			setStatementProvider(
+					new StatementProvider()
+					{
+						public Statement getStatement()
+						{
+							return newStatement();
+						}
+					});
 		}
 		catch (ClassNotFoundException | SQLException e)
 		{
@@ -856,8 +876,27 @@ public class HomeCountApp
 
 		catPanel.add(new JScrollPane(catTable));
 
-		catnameTf = new JTextField();
-		parcatTf  = new JTextField();
+		catnameTf   = new JTextField();
+		parcatTf    = new JTextField();
+		catParentCb = new JComboBox<Category>(
+			new DefaultComboBoxModel<Category>()
+			{
+				java.util.List<Category> categories = new CategoryDAO(getStatementProvider()).getCategories();
+
+				
+				{
+					System.out.println(Arrays.toString(categories.toArray()));
+				}
+				public Category getElementAt(int index)
+				{
+					return categories.get(index);
+				}
+
+				public int getSize()
+				{
+					return categories.size();
+				}
+			});
 
 		JPanel f2p = new JPanel(new GridBagLayout());
 
@@ -900,6 +939,26 @@ public class HomeCountApp
 		c.gridy     = 1;
 		c.gridwidth = 1;
 		f2p.add(parcatTf, c);
+
+		c           = new GridBagConstraints();
+		c.fill      = GridBagConstraints.HORIZONTAL;
+		c.anchor    = GridBagConstraints.LINE_START;
+		c.weightx   = 0.25;
+		c.weighty   = 0;
+		c.gridx     = 0;
+		c.gridy     = 2;
+		c.gridwidth = 1;
+		f2p.add(new JLabel("Parent category"), c);
+
+		c           = new GridBagConstraints();
+		c.fill      = GridBagConstraints.HORIZONTAL;
+		c.anchor    = GridBagConstraints.LINE_END;
+		c.weightx   = 0.75;
+		c.weighty   = 0;
+		c.gridx     = 1;
+		c.gridy     = 2;
+		c.gridwidth = 1;
+		f2p.add(catParentCb, c);
 
 		catPanel.add(f2p);
 
@@ -1015,6 +1074,8 @@ public class HomeCountApp
 	{
 		catnameTf.setText(cat.getName());
 		parcatTf.setText("" + cat.getParId());
+		System.out.println(cat);
+		catParentCb.setSelectedItem(cat);
 	}
 	 
 	public Integer parseInt(String value, Integer defVal)

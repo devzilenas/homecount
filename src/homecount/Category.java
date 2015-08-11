@@ -75,4 +75,13 @@ public class Category
 	{
 		return id;
 	}
+	public String toString()
+	{
+		return "id:" + getId() + " "+ getName();
+	}
+	public boolean equals(Object obj)
+	{
+		Category cat = (Category) obj;
+		return (null != obj) && cat.getId().equals(getId());
+	}
 }
