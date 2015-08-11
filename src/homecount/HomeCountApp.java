@@ -81,12 +81,23 @@ public class HomeCountApp
 
 	public static void main(String[] args)
 	{
-		HomeCountApp hca = new HomeCountApp(); 
-		hca.startTCPServer();
-		hca.connectDB();
-		//Create DB with a table if not found
-		hca.setupDB(); 
-		hca.prepareFrame();
+		/**
+		 * Makes thread-safe programm.
+		 */
+		Runnable runner = 
+			new Runnable()
+			{ 
+				public void run()
+				{ 
+					HomeCountApp hca = new HomeCountApp(); 
+					hca.startTCPServer();
+					hca.connectDB();
+					//Create DB with a table if not found
+					hca.setupDB(); 
+					hca.prepareFrame();
+				}
+			};
+		EventQueue.invokeLater(runner);
 	}
 
 	void setupDB()
