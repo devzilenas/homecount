@@ -868,6 +868,16 @@ public class HomeCountApp
 			@Override
 			public Object readRow(int selected)
 			{
+				try
+				{
+					RowSet rs = getTableModel().getRowSet();
+					rs.absolute(selected + 1);
+				}
+				catch (SQLException e)
+				{
+					e.printStackTrace();
+				}
+
 				return getTableModel().getData().get(selected);
 			}
 		};
@@ -972,7 +982,33 @@ public class HomeCountApp
 		Box b2L = new Box(BoxLayout.X_AXIS);
 		b2L.add(new JButton("Insert row"));
 		b2L.add(new JButton("Delete row"));
-		b2L.add(new JButton("Update row"));
+		JButton cuB = new JButton("Update row");
+		cuB.addActionListener(
+			new ActionListener()
+			{
+				public void actionPerformed(ActionEvent evt)
+				{
+					Category cat = null;
+					if (null != (cat = (Category) cts.getCurrent()))
+					{ 
+						RowSet rs = cts.getTableModel().getRowSet(); 
+						Category cu = readCategory();
+						try
+						{
+							rs.updateString(2, cu.getName());
+							rs.updateInt(   3, cu.getParId()); 
+							rs.updateRow();
+							cts.getTableModel().refreshRowSet();
+							cts.fireTableRowsUpdated(rs.getRow()-1, rs.getRow()-1);
+						}
+						catch (SQLException e)
+						{
+							e.printStackTrace();
+						}
+					}
+				}
+			});
+		b2L.add(cuB);
 		b2L.add(new JButton("Close"));
 		catPanel.add(b2L);
 
@@ -1067,6 +1103,13 @@ public class HomeCountApp
 				nameTf.getText(),
 				(java.util.Date) ondateFtf.getValue(),
 				categoryTf.getText());
+	}
+
+	public Category readCategory()
+	{
+		return new Category( 
+				catnameTf.getText(), 
+				(Category) catParentCb.getSelectedItem());
 	}
 
 	public void setTextFields(IERecord ieRecord)

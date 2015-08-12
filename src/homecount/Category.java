@@ -25,6 +25,12 @@ public class Category
 		this.parent = parent;
 	}
 
+	public Category(String name, Integer parid)
+	{
+		this.name  = name;
+		this.parid = parid;
+	}
+
 	public Category(Integer id, String name)
 	{
 		this.id     = id;
@@ -48,7 +54,9 @@ public class Category
 
 	public Integer getParId()
 	{
-		return parid;
+		return null != getParent()
+		       ? getParent().getId()
+			   : parid;
 	}
 
 	public void setName(String name)

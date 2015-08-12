@@ -35,7 +35,7 @@ public class CategoryTableModel
 	}
 
 	/**
-	 * For @overrid
+	 * For @override
 	 */
 	public Statement getStatement()
 	{
@@ -163,5 +163,11 @@ public class CategoryTableModel
 				break;
 		}
 		return name;
+	}
+
+	public void refreshRowSet()
+	{
+		this.rs   = makeRowSet();
+		makeData();
 	}
 }

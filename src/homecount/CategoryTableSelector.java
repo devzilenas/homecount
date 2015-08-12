@@ -33,6 +33,11 @@ public class CategoryTableSelector
 		return current;
 	}
 
+	public void fireTableRowsUpdated(int firstRow, int lastRow)
+	{
+		getTableModel().fireTableRowsUpdated(firstRow, lastRow);
+	}
+
 	private void addListener()
 	{
 		getTable().getSelectionModel().addListSelectionListener(
