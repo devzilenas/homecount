@@ -170,4 +170,21 @@ public class CategoryTableModel
 		this.rs   = makeRowSet();
 		makeData();
 	}
+
+	public void insertRow(Category cat)
+	{ 
+		RowSet rs = getRowSet();
+
+		try
+		{
+			rs.last();
+			rs.moveToInsertRow();
+			rs.updateString(2,cat.getName());
+			rs.insertRow();
+		}
+		catch (SQLException e)
+		{
+			e.printStackTrace();
+		}
+	}
 }

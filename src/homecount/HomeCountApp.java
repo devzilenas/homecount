@@ -953,9 +953,11 @@ public class HomeCountApp
 		catPanel.add(f2p);
 
 		Box b2L = new Box(BoxLayout.X_AXIS);
-		b2L.add(new JButton("Insert row"));
-		b2L.add(new JButton("Delete row"));
+		JButton cirB = new JButton("Insert row");
 		JButton cuB = new JButton("Update row");
+
+		b2L.add(cirB);
+		b2L.add(new JButton("Delete row"));
 		cuB.addActionListener(
 			new ActionListener()
 			{
@@ -982,8 +984,22 @@ public class HomeCountApp
 					}
 				}
 			});
+		cirB.addActionListener(
+			new ActionListener()
+			{
+				public void actionPerformed(ActionEvent evt)
+				{ 
+					cts.getTableModel().insertRow(readCategory());
+					cts.getTableModel().refreshRowSet();
+					cts.fireTableRowsInserted(
+						cts.getTableModel().getRowCount()+1, 
+						cts.getTableModel().getRowCount()+1);
+				}
+			});
+
 		b2L.add(cuB);
 		b2L.add(new JButton("Close"));
+
 		catPanel.add(b2L);
 
 		tpane.addTab("Categories", catPanel);
