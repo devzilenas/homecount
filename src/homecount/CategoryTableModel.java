@@ -140,7 +140,7 @@ public class CategoryTableModel
 				value = cat.getName();
 				break;
 			case 2:
-				value = cat.getParId();
+				value = cat.getParent();
 				break;
 		}
 
@@ -153,13 +153,13 @@ public class CategoryTableModel
 		switch (column)
 		{
 			case 0:
-				name = "Id";
+				name = "Category ID";
 				break;
 			case 1:
-				name = "Name";
+				name = "Category name";
 				break;
 			case 2:
-				name = "ParId";
+				name = "Parent category";
 				break;
 		}
 		return name;

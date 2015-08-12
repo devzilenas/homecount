@@ -48,7 +48,7 @@ public class HomeCountApp
 	/**
 	 * Category fields
 	 */
-	JTextField catnameTf, parcatTf;
+	JTextField catnameTf;
 	JComboBox catParentCb;
 
 	Server dbServer = null;
@@ -897,21 +897,14 @@ public class HomeCountApp
 		catPanel.add(new JScrollPane(catTable));
 
 		catnameTf   = new JTextField();
-		parcatTf    = new JTextField();
 		catParentCb = new JComboBox<Category>(
-			new DefaultComboBoxModel<Category>()
+			new CategoryComboBoxModel<Category>()
 			{
-				java.util.List<Category> categories = new CategoryDAO(getStatementProvider()).getCategories();
-
-				
-				public Category getElementAt(int index)
-				{
-					return categories.get(index);
-				}
-
-				public int getSize()
-				{
-					return categories.size();
+				@Override
+				public void refreshData()
+				{	
+					categories = new CategoryDAO(getStatementProvider()).getCategories();
+					fireContentsChanged(this, 0, getSize());
 				}
 			});
 
@@ -945,26 +938,6 @@ public class HomeCountApp
 		c.gridx     = 0;
 		c.gridy     = 1;
 		c.gridwidth = 1;
-		f2p.add(new JLabel("Parent"), c);
-
-		c           = new GridBagConstraints();
-		c.fill      = GridBagConstraints.HORIZONTAL;
-		c.anchor    = GridBagConstraints.LINE_END;
-		c.weightx   = 0.75;
-		c.weighty   = 0;
-		c.gridx     = 1;
-		c.gridy     = 1;
-		c.gridwidth = 1;
-		f2p.add(parcatTf, c);
-
-		c           = new GridBagConstraints();
-		c.fill      = GridBagConstraints.HORIZONTAL;
-		c.anchor    = GridBagConstraints.LINE_START;
-		c.weightx   = 0.25;
-		c.weighty   = 0;
-		c.gridx     = 0;
-		c.gridy     = 2;
-		c.gridwidth = 1;
 		f2p.add(new JLabel("Parent category"), c);
 
 		c           = new GridBagConstraints();
@@ -973,7 +946,7 @@ public class HomeCountApp
 		c.weightx   = 0.75;
 		c.weighty   = 0;
 		c.gridx     = 1;
-		c.gridy     = 2;
+		c.gridy     = 1;
 		c.gridwidth = 1;
 		f2p.add(catParentCb, c);
 
@@ -1000,6 +973,7 @@ public class HomeCountApp
 							rs.updateRow();
 							cts.getTableModel().refreshRowSet();
 							cts.fireTableRowsUpdated(rs.getRow()-1, rs.getRow()-1);
+							((CategoryComboBoxModel) catParentCb.getModel()).refreshData();
 						}
 						catch (SQLException e)
 						{
@@ -1123,8 +1097,6 @@ public class HomeCountApp
 	public void setCategoryTextFields(Category cat)
 	{
 		catnameTf.setText(cat.getName());
-		parcatTf.setText("" + cat.getParId());
-		System.out.println(cat);
 		catParentCb.setSelectedItem(cat.getParent());
 	}
 	 
