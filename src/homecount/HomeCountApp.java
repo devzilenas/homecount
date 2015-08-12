@@ -42,6 +42,8 @@ public class HomeCountApp
 				Calendar.getInstance().get(Calendar.YEAR) + 100,
 				1));
 	JSpinner monthSp = new JSpinner(new SpinnerNumberModel(1,1,12,1));
+	KeyStroke ksF11 = KeyStroke.getKeyStroke(KeyEvent.VK_F11,0);
+	KeyStroke ksF12 = KeyStroke.getKeyStroke(KeyEvent.VK_F12,0);
 
 	/**
 	 * Category fields
@@ -812,6 +814,14 @@ public class HomeCountApp
 		tpane.addTab("Expenses", panel);
 
 		/**
+		 * Setup access keys.
+		 */
+		InputMap tpinpmap = tpane.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+
+		tpinpmap.put(ksF11, "navigatePrevious");
+		tpinpmap.put(ksF12, "navigateNext");
+
+		/**
 		 * Setup categories panel.
 		 */
 		JPanel catPanel = new JPanel();
@@ -884,9 +894,6 @@ public class HomeCountApp
 				java.util.List<Category> categories = new CategoryDAO(getStatementProvider()).getCategories();
 
 				
-				{
-					System.out.println(Arrays.toString(categories.toArray()));
-				}
 				public Category getElementAt(int index)
 				{
 					return categories.get(index);
@@ -1075,7 +1082,7 @@ public class HomeCountApp
 		catnameTf.setText(cat.getName());
 		parcatTf.setText("" + cat.getParId());
 		System.out.println(cat);
-		catParentCb.setSelectedItem(cat);
+		catParentCb.setSelectedItem(cat.getParent());
 	}
 	 
 	public Integer parseInt(String value, Integer defVal)

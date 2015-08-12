@@ -77,7 +77,7 @@ public class Category
 	}
 	public String toString()
 	{
-		return "id:" + getId() + " "+ getName();
+		return getName();
 	}
 	public boolean equals(Object obj)
 	{
