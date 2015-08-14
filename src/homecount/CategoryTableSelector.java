@@ -6,7 +6,7 @@ import javax.swing.table.*;
 public class CategoryTableSelector
 	extends Observable
 {
-	Object current;
+	Object   current;
 	JTable   table;
 	CategoryTableModel ctm;
 
@@ -33,9 +33,9 @@ public class CategoryTableSelector
 		return current;
 	}
 
-	public void fireTableRowsInserted(int firstRow, int lastRow)
+	public void fireTableDataChanged()
 	{
-		getTableModel().fireTableRowsInserted(firstRow, lastRow);
+		getTableModel().fireTableDataChanged();
 	}
 
 	public void fireTableRowsUpdated(int firstRow, int lastRow)
@@ -58,7 +58,8 @@ public class CategoryTableSelector
 						if (-1 != selectedIndex)
 						{
 							System.out.format("Index: %d, selected: %d%n", selectedIndex, selected);
-							setCurrent(readRow(selected));
+							//Reads a row
+							setCurrent(getTableModel().getData().get(selected));
 							notifyObservers();
 						}
 					}
@@ -69,13 +70,5 @@ public class CategoryTableSelector
 	public CategoryTableModel getTableModel()
 	{
 		return ctm;
-	}
-
-	/**
-	 * For @override
-	 */
-	public Object readRow(int selected)
-	{
-		return null;
 	}
 }

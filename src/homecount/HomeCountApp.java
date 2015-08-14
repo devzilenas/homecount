@@ -48,8 +48,8 @@ public class HomeCountApp
 	/**
 	 * Category fields
 	 */
-	JTextField catnameTf;
-	JComboBox catParentCb;
+	JTextField catnameTf       ;
+	JComboBox  catParentCb     ;
 
 	Server dbServer = null;
 
@@ -827,60 +827,10 @@ public class HomeCountApp
 		JPanel catPanel = new JPanel();
 		catPanel.setLayout(new BoxLayout(catPanel, BoxLayout.Y_AXIS));
 
-		JTable catTable = new JTable(
-			new CategoryTableModel(
-				new ConnectionProvider()
-				{
-					public Connection getConnection() 
-					{
-						return getConnection();
-					}
-				})
-			{
-				public Object readRow(int selected)
-				{
-					return getData().get(selected);
-				}
-				public Statement getStatement()
-				{
-					return newStatement();
-				}
-			})
-			{
-				@Override
-				public TableCellEditor getCellEditor(int row, int column)
-				{
-				   Object value = super.getValueAt(row, column);
-				   if (null != value)
-				   {
-					  if (value instanceof JComboBox)
-					  {
-						   return new DefaultCellEditor((JComboBox)value);
-					  }
-					  return getDefaultEditor(value.getClass());
-				   }
-				   return super.getCellEditor(row, column);
-				}
-			};
-
-		cts = new CategoryTableSelector(catTable, (CategoryTableModel) catTable.getModel())
-		{ 
-			@Override
-			public Object readRow(int selected)
-			{
-				try
-				{
-					RowSet rs = getTableModel().getRowSet();
-					rs.absolute(selected + 1);
-				}
-				catch (SQLException e)
-				{
-					e.printStackTrace();
-				}
-
-				return getTableModel().getData().get(selected);
-			}
-		};
+		final JTable catTable = new JTable(
+				new CategoryTableModel(
+					new CategoryDAOImpl(getConnection())));
+		cts = new CategoryTableSelector(catTable, (CategoryTableModel) catTable.getModel());
 
 		cts.addObserver(
 			new Observer()
@@ -903,7 +853,7 @@ public class HomeCountApp
 				@Override
 				public void refreshData()
 				{	
-					categories = new CategoryDAO(getStatementProvider()).getCategories();
+					categories = ((CategoryTableModel) catTable.getModel()).getData();
 					Set<Category> uniqc = new TreeSet<Category>(
 						new Comparator<Category>()
 						{
@@ -967,11 +917,10 @@ public class HomeCountApp
 		f2p.add(catParentCb, c);
 
 		catPanel.add(f2p);
-
-		Box b2L = new Box(BoxLayout.X_AXIS);
 		JButton cirB = new JButton("Insert row");
 		JButton cuB = new JButton("Update row");
 
+		Box b2L = new Box(BoxLayout.X_AXIS);
 		b2L.add(cirB);
 		b2L.add(new JButton("Delete row"));
 		cuB.addActionListener(
@@ -982,24 +931,15 @@ public class HomeCountApp
 					Category cat = null;
 					if (null != (cat = (Category) cts.getCurrent()))
 					{ 
-						RowSet rs = cts.getTableModel().getRowSet(); 
-						Category cu = readCategory();
-						try
-						{
-							int currentPosition = rs.getRow();
-							rs.updateString(2, cu.getName());
-							rs.updateInt(   3, cu.getParId()); 
-							rs.updateRow();
-							cts.getTableModel().refreshRowSet();
-							//Go to the same row that was before.
-							rs.absolute(currentPosition);
-							cts.fireTableRowsUpdated(rs.getRow()-1, rs.getRow()-1);
-							((CategoryComboBoxModel) catParentCb.getModel()).refreshData();
-						}
-						catch (SQLException e)
-						{
-							e.printStackTrace();
-						}
+						cat.setName(catnameTf.getText());
+						cat.setParent((Category) catParentCb.getSelectedItem());
+						CategoryTableModel ctm = (CategoryTableModel) cts.getTableModel();
+						ctm.update(cat);
+						ctm.refreshData();
+						cts.fireTableRowsUpdated(
+							ctm.getData().indexOf(cat) -1,
+							ctm.getData().indexOf(cat) -1);
+						((CategoryComboBoxModel) catParentCb.getModel()).refreshData();
 					}
 				}
 			});
@@ -1008,11 +948,13 @@ public class HomeCountApp
 			{
 				public void actionPerformed(ActionEvent evt)
 				{ 
-					cts.getTableModel().insertRow(readCategory());
-					cts.getTableModel().refreshRowSet();
-					cts.fireTableRowsInserted(
-						cts.getTableModel().getRowCount()+1, 
-						cts.getTableModel().getRowCount()+1);
+					cts.getTableModel().insertRow(
+						new Category(
+							catnameTf.getText(),
+						    (Category) catParentCb.getSelectedItem()));
+					cts.getTableModel().refreshData();
+					((CategoryComboBoxModel) catParentCb.getModel()).refreshData();
+					cts.fireTableDataChanged();
 				}
 			});
 
@@ -1114,12 +1056,6 @@ public class HomeCountApp
 				categoryTf.getText());
 	}
 
-	public Category readCategory()
-	{
-		return new Category( 
-				catnameTf.getText(), 
-				(Category) catParentCb.getSelectedItem());
-	}
 
 	public void setTextFields(IERecord ieRecord)
 	{
@@ -1133,19 +1069,5 @@ public class HomeCountApp
 	{
 		catnameTf.setText(cat.getName());
 		catParentCb.setSelectedItem(cat.getParent());
-	}
-	 
-	public Integer parseInt(String value, Integer defVal)
-	{
-		int retVal;
-		try
-		{
-			retVal = Integer.valueOf(value);
-		}
-		catch (NumberFormatException e)
-		{
-			retVal = defVal;
-		} 
-		return retVal;
 	}
 }

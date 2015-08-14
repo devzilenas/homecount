@@ -1,32 +1,21 @@
 import java.util.*;
-import javax.swing.table.*;
-import java.sql.*;
-import javax.sql.*;
-import javax.sql.rowset.JdbcRowSet  ;
-import com.sun.rowset.JdbcRowSetImpl;
-import javax.sql.rowset.spi.SyncProviderException;
-import javax.sql.rowset.spi.SyncResolver;
+import javax.swing.table.AbstractTableModel;
 
 public class CategoryTableModel
 	extends AbstractTableModel
 {
-	String query = "SELECT c.id, c.catname, c.parcatid FROM category c";
+	CategoryDAOImpl cdao = null;
+	List<Category>  data = new LinkedList<>();
 
-	RowSet             rs ;
-	ConnectionProvider conp;
-	List<Category> data = new LinkedList<>();
-	Map<Integer, Category> categories = new HashMap<>();
-
-	public CategoryTableModel(ConnectionProvider conp)
+	public CategoryTableModel(CategoryDAOImpl cdao)
 	{
-		this.conp = conp;
-		this.rs   = makeRowSet();
+		this.cdao = cdao;
 		makeData();
 	}
 
-	private Map<Integer, Category> getCategories()
+	CategoryDAOImpl getCDAO()
 	{
-		return categories;
+		return cdao;
 	}
 
 	public List<Category> getData()
@@ -34,79 +23,9 @@ public class CategoryTableModel
 		return data;
 	}
 
-	/**
-	 * For @override
-	 */
-	public Statement getStatement()
-	{
-		return null;
-	}
-
-	public String getQuery() 
-	{
-		return query;
-	}
-
 	private void makeData()
 	{
-		RowSet rs = getRowSet();
-
-		try
-		{
-			while (rs.next())
-			{
-				Category cat = new Category(
-						rs.getInt(1), rs.getString(2), rs.getInt(3));
-				categories.put(cat.getId(), cat);
-			}
-		}
-		catch (SQLException e)
-		{
-			e.printStackTrace();
-		}
-
-		for (Category cat : categories.values())
-		{
-			cat.setParent(
-					categories.get(
-						cat.getParId()));
-		}
-		data = new LinkedList<>(categories.values());
-	}
-
-	public RowSet makeRowSet()
-	{
-		RowSet rowSet = null;
-		try
-		{
-			rowSet = new JdbcRowSetImpl(
-				getStatement().executeQuery(getQuery()));
-		}
-		catch (SQLException e)
-		{
-			e.printStackTrace();
-		}
-		return rowSet;
-	}
-
-	public CategoryTableModel(RowSet rs)
-	{
-		this.rs = rs;
-	}
-
-	public ConnectionProvider getConnectionProvider()
-	{
-		return conp;
-	}
-
-	public Connection getConnection()
-	{
-		return getConnectionProvider().getConnection();
-	}
-
-	public RowSet getRowSet()
-	{
-		return rs;
+		data = getCDAO().getAll();
 	}
 
 	public Class<?> getColumnClass(int columnIndex)
@@ -124,9 +43,6 @@ public class CategoryTableModel
 		return data.size();
 	}
 
-	/**
-	 * as arguments expects 0-based indexes
-	 */
 	public Object getValueAt(int row, int column)
 	{
 		Object value = null;
@@ -165,26 +81,18 @@ public class CategoryTableModel
 		return name;
 	}
 
-	public void refreshRowSet()
+	public void refreshData()
 	{
-		this.rs   = makeRowSet();
 		makeData();
 	}
 
-	public void insertRow(Category cat)
-	{ 
-		RowSet rs = getRowSet();
+	public void update(Category cat)
+	{
+		getCDAO().update(cat);
+	}
 
-		try
-		{
-			rs.last();
-			rs.moveToInsertRow();
-			rs.updateString(2,cat.getName());
-			rs.insertRow();
-		}
-		catch (SQLException e)
-		{
-			e.printStackTrace();
-		}
+	public void insertRow(Category cat)
+	{
+		getCDAO().save(cat);
 	}
 }

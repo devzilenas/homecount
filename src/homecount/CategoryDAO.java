@@ -1,57 +1,9 @@
-import java.util.*;
-import java.sql.*;
-import javax.sql.*;
-import com.sun.rowset.JdbcRowSetImpl;
-
-public class CategoryDAO
+import java.util.List;
+public interface CategoryDAO
 {
-	StatementProvider sp;
-
-	public CategoryDAO(StatementProvider sp)
-	{
-		this.sp = sp;
-	}
-
-	StatementProvider getStatementProvider()
-	{
-		return sp;
-	}
-
-	Statement newStatement()
-	{
-		return getStatementProvider().getStatement();
-	}
-
-	public List<Category> getCategories()
-	{
-		String q = "SELECT id, catname, parcatid FROM category";
-
-		List<Category> data = new LinkedList<>();
-		Map<Integer, Category> categories = new HashMap<>();
-
-		try
-		{
-			RowSet rs = new JdbcRowSetImpl(newStatement().executeQuery(q));
-			
-			while (rs.next())
-			{ 
-				Category cat = new Category(
-						rs.getInt(1), rs.getString(2), rs.getInt(3));
-				categories.put(cat.getId(), cat);
-			}
-		}
-		catch (SQLException e)
-		{
-			e.printStackTrace();
-		}
-
-		for (Category cat : categories.values())
-		{
-			cat.setParent(
-					categories.get(
-						cat.getParId()));
-		}
-
-		return new LinkedList<>(categories.values());
-	}
+	public void save(Category cat);
+	public Category getById(Integer id);
+	public void update(Category cat);
+	public void deleteById(Integer id);
+	public List<Category> getAll();
 }

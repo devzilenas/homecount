@@ -52,16 +52,21 @@ public class Category
 		this.parent = parent;
 	}
 
+	public void setName(String name)
+	{
+		this.name = name;
+	}
+
+	public void setParid(Integer parid)
+	{
+		this.parid = parid; 
+	}
+
 	public Integer getParId()
 	{
 		return null != getParent()
 		       ? getParent().getId()
 			   : parid;
-	}
-
-	public void setName(String name)
-	{
-		this.name = name;
 	}
 
 	public void setParent(Category parent)
@@ -79,10 +84,16 @@ public class Category
 		return parent;
 	}
 
+	public void setId(Integer id)
+	{
+		this.id = id;
+	}
+
 	public Integer getId()
 	{
 		return id;
 	}
+
 	public String toString()
 	{
 		return getName();
