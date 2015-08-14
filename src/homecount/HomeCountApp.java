@@ -904,6 +904,22 @@ public class HomeCountApp
 				public void refreshData()
 				{	
 					categories = new CategoryDAO(getStatementProvider()).getCategories();
+					Set<Category> uniqc = new TreeSet<Category>(
+						new Comparator<Category>()
+						{
+							public int compare(Category c1, Category c2)
+							{
+								return new String(c1.getName()).compareTo(new String(c2.getName()));
+							}
+
+							public boolean equals(Object obj) 
+							{
+								return false;
+							}
+						});
+					uniqc.addAll(categories);
+					categories = new LinkedList<Category>(uniqc);
+					
 					fireContentsChanged(this, 0, getSize());
 				}
 			});
@@ -970,10 +986,13 @@ public class HomeCountApp
 						Category cu = readCategory();
 						try
 						{
+							int currentPosition = rs.getRow();
 							rs.updateString(2, cu.getName());
 							rs.updateInt(   3, cu.getParId()); 
 							rs.updateRow();
 							cts.getTableModel().refreshRowSet();
+							//Go to the same row that was before.
+							rs.absolute(currentPosition);
 							cts.fireTableRowsUpdated(rs.getRow()-1, rs.getRow()-1);
 							((CategoryComboBoxModel) catParentCb.getModel()).refreshData();
 						}

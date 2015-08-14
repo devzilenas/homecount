@@ -87,6 +87,7 @@ public class Category
 	{
 		return getName();
 	}
+
 	public boolean equals(Object obj)
 	{
 		Category cat = (Category) obj;
